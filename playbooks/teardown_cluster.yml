@@ -38,6 +38,23 @@
         - /var/lib/etcd
       ignore_errors: yes
 
+    - name: Remove Kubernetes packages
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: absent
+        purge: yes
+
+    - name: Remove Kubernetes apt repository
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/kubernetes.list
+        - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
     - name: Remove Kubernetes binaries
       file:
         path: "{{ item }}"
