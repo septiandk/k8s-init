@@ -17,6 +17,7 @@
       - kubelet
       - kubeadm
       - kubectl
+      - kubernetes-cni
     state: present
     update_cache: yes
   register: kubernetes_install_result
