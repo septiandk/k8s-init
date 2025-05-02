@@ -1,0 +1,69 @@
+- hosts: masters[0]
+  become: yes
+  tasks:
+    - name: Upgrade kubeadm on master nodes
+      apt:
+        name: "kubeadm={{ kubernetes_version }}"
+        state: present
+        update_cache: yes
+
+    - name: Check kubeadm upgrade plan
+      command: kubeadm upgrade plan
+      register: upgrade_plan_output
+
+    - name: Print upgrade plan output
+      debug:
+        msg: "{{ upgrade_plan_output.stdout }}"
+
+    - name: Apply kubeadm upgrade
+      command: kubeadm upgrade apply v{{ kubernetes_version | regex_replace('-00$', '') }} -y
+      register: upgrade_apply_output
+
+    - name: Print kubeadm upgrade output
+      debug:
+        msg: "{{ upgrade_apply_output.stdout }}"
+
+    - name: Upgrade kubelet and kubectl on master nodes
+      apt:
+        name:
+          - "kubelet={{ kubernetes_version }}"
+          - "kubectl={{ kubernetes_version }}"
+        state: present
+        update_cache: yes
+
+    - name: Restart kubelet service
+      service:
+        name: kubelet
+        state: restarted
+
+- hosts: workers
+  become: yes
+  tasks:
+    - name: Drain worker node (run from master)
+      delegate_to: "{{ groups['masters'][0] }}"
+      command: kubectl drain {{ inventory_hostname }} --ignore-daemonsets --delete-local-data
+      when: inventory_hostname != groups['masters'][0]
+
+    - name: Upgrade kubeadm on worker nodes
+      apt:
+        name: "kubeadm={{ kubernetes_version }}"
+        state: present
+        update_cache: yes
+
+    - name: Upgrade kubelet and kubectl on worker nodes
+      apt:
+        name:
+          - "kubelet={{ kubernetes_version }}"
+          - "kubectl={{ kubernetes_version }}"
+        state: present
+        update_cache: yes
+
+    - name: Restart kubelet service
+      service:
+        name: kubelet
+        state: restarted
+
+    - name: Uncordon worker node (run from master)
+      delegate_to: "{{ groups['masters'][0] }}"
+      command: kubectl uncordon {{ inventory_hostname }}
+      when: inventory_hostname != groups['masters'][0]
