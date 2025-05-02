@@ -32,7 +32,8 @@
       - kubelet
       - kubeadm
       - kubectl
-      - kubernetes-cni    state: present
+      - kubernetes-cni    
+    state: present
     update_cache: yes
     force: yes
 
