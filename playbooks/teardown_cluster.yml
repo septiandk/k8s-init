@@ -5,13 +5,13 @@
     - name: Drain node (only on master if possible)
       shell: |
         kubectl drain {{ inventory_hostname }} --delete-local-data --force --ignore-daemonsets
-      when: inventory_hostname in groups['masters']
+      when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
       ignore_errors: yes
 
     - name: Delete node from cluster (only on master)
       shell: |
         kubectl delete node {{ inventory_hostname }}
-      when: inventory_hostname in groups['masters']
+      when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
       ignore_errors: yes
 
     - name: Stop kubelet service
