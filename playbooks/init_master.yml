@@ -82,6 +82,15 @@
     - name: Print Flannel network application process
       debug:
         msg: "Flannel network application output: {{ flannel_output.stdout }}"
+    
+    - name: install helm 
+      command: curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+      register: helm_output
+      ignore_errors: yes
+    
+    - name: Print helm installation process
+      debug:
+        msg: "Helm installation output: {{ helm_output.stdout }}"
 
     - name: Save join command for worker nodes
       command: kubeadm token create --print-join-command
