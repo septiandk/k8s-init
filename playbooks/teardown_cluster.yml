@@ -4,7 +4,13 @@
   tasks:
     - name: Drain node (only on master if possible)
       shell: |
-        kubectl drain {{ inventory_hostname }} --delete-local-data --force --ignore-daemonsets
+        kubectl drain {{ inventory_hostname }} --force --ignore-daemonsets
+      when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
+      ignore_errors: yes
+
+    - name: uncordon node (only on master if possible)
+      shell: |
+        kubectl uncordon {{ inventory_hostname }}
       when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
       ignore_errors: yes
 
