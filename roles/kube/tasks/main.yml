@@ -26,21 +26,13 @@
   debug:
     msg: "Installed packages result: {{ kubernetes_install_result }}"
 
-- name: check if thers is missing packages
-  debug:
-    msg: "Missing packages: {{ item }}"
-  loop: "{{ kubernetes_install_result.results | selectattr('rc', 'ne', 0) | map(attribute='item') | list }}"
-  when: kubernetes_install_result is defined and kubernetes_install_result.results | selectattr('rc', 'ne', 0) | list | length > 0
-
 - name: reinstall missing packages with --reinstall
   apt:
     name: "{{ item }}"
     state: present
     update_cache: yes
     force: yes
-  loop: "{{ kubernetes_install_result.results | selectattr('rc', 'ne', 0) | map(attribute='item') | list }}"
-  when: kubernetes_install_result is defined and kubernetes_install_result.results | selectattr('rc', 'ne', 0) | list | length > 0
-  
+
 - name: Hold Kubernetes packages
   dpkg_selections:
     name: "{{ item }}"
