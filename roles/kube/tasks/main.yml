@@ -28,8 +28,11 @@
 
 - name: reinstall missing packages with --reinstall
   apt:
-    name: "{{ item }}"
-    state: present
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+      - kubernetes-cni    state: present
     update_cache: yes
     force: yes
 
