@@ -38,6 +38,11 @@
         - /var/lib/etcd
       ignore_errors: yes
 
+    - name: Unhold Kubernetes packages
+      shell: |
+        apt-mark unhold kubelet kubeadm kubectl
+      ignore_errors: yes
+      
     - name: Remove Kubernetes packages
       apt:
         name:
