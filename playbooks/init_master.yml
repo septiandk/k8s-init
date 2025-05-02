@@ -9,7 +9,11 @@
     - name: Print cluster existence check
       debug:
         msg: "Kubernetes already initialized: {{ kubeadm_initialized.stat.exists }}"
-        
+    
+    - name: run kubelet before init
+      command: systemctl enable --now kubelet
+      when: kubeadm_initialized.stat.exists == false
+
     - name: Initialize Kubernetes master (with load balancer)
       command: >
         kubeadm init
