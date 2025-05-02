@@ -2,7 +2,8 @@
   shell: |
     curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | \
     gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-  warns: false
+  args:
+    warn: false
 
 - name: Add Kubernetes repo
   copy:
