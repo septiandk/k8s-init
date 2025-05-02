@@ -1,0 +1,25 @@
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    maxconn 2000
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log     global
+    mode    tcp
+    option  tcplog
+    timeout connect 10s
+    timeout client  1m
+    timeout server  1m
+
+frontend kubernetes
+    bind *:6443
+    default_backend kube-apiservers
+
+backend kube-apiservers
+    balance roundrobin
+{% for host in groups['masters'] %}
+    server master{{ loop.index }} {{ host }}:6443 check
+{% endfor %}

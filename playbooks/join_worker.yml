@@ -1,0 +1,21 @@
+- hosts: masters[0]
+  become: yes
+  tasks:
+
+    - name: Generate kubeadm join command for control-plane
+      command: kubeadm token create --print-join-command
+      register: join_command
+      delegate_to: localhost
+      run_once: true
+
+- hosts: workers
+  become: yes
+  tasks:
+    - name: Join worker node to the cluster
+      command: "{{ hostvars[groups['masters'][0]].join_command.stdout }}"
+      register: join_output
+      ignore_errors: yes
+
+    - name: Debug worker node join output
+      debug:
+        msg: "Worker join output: {{ join_output }}"

@@ -1,0 +1,44 @@
+- hosts: masters[0]
+  become: yes
+  tasks:
+    - name: Create kubeadm join command and cert key
+      command: >
+        kubeadm init phase upload-certs --upload-certs
+      register: upload_certs
+      delegate_to: localhost
+      run_once: true
+
+    - name: Set fact for cert key
+      set_fact:
+        cert_key: "{{ upload_certs.stdout_lines[-1] }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Generate kubeadm join command for control-plane
+      command: kubeadm token create --print-join-command
+      register: join_command
+      delegate_to: localhost
+      run_once: true
+
+    - name: Combine full control-plane join command
+      set_fact:
+        full_join_command: "{{ join_command }} --control-plane --certificate-key {{ cert_key }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Debug full join command
+      debug:
+        msg: "{{ full_join_command }}"
+
+- hosts: "masters[1:]"
+  become: yes
+  tasks:
+    - name: Join additional master node to the cluster
+      command: "{{ hostvars[groups['masters'][0]].full_join_command.stdout }}"
+      register: join_output
+      ignore_errors: yes
+
+    - name: Debug master node join output
+      debug:
+        msg: "Master join output: {{ join_output }}"
+

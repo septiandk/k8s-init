@@ -1,0 +1,3 @@
+pod_cidr: "10.244.0.0/16"
+use_loadbalancer: false
+cluster_endpoint: "172.29.249.184"

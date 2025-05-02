@@ -1,0 +1,48 @@
+- name: Install containerd and dependencies
+  apt:
+    name:
+      - containerd
+      - apt-transport-https
+      - gpg
+      - ca-certificates
+    state: present
+    update_cache: yes
+  register: containerd_install_result
+
+- name: Debug install result
+  debug:
+    msg: "Installed packages result: {{ containerd_install_result }}"
+
+- name: Ensure /etc/containerd directory exists
+  file:
+    path: /etc/containerd
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  register: containerd_dir_result
+
+- name: Debug directory creation
+  debug:
+    msg: "Directory creation result: {{ containerd_dir_result }}"
+
+- name: Generate containerd config
+  shell: containerd config default > /etc/containerd/config.toml
+  args:
+    creates: /etc/containerd/config.toml
+  register: containerd_config_result
+
+- name: Debug config generation
+  debug:
+    msg: "Config generation result: {{ containerd_config_result }}"
+
+- name: Enable and start containerd
+  systemd:
+    name: containerd
+    enabled: yes
+    state: restarted
+  register: containerd_service_result
+
+- name: Debug service start
+  debug:
+    msg: "Containerd service result: {{ containerd_service_result }}"

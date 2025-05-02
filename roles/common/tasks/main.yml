@@ -1,0 +1,35 @@
+- name: Disable swap
+  shell: |
+    swapoff -a
+    sed -i '/swap/d' /etc/fstab
+
+- name: Disable UFW
+  systemd:
+    name: ufw
+    state: stopped
+    enabled: no
+
+- name: Load kernel modules
+  copy:
+    dest: /etc/modules-load.d/containerd.conf
+    content: |
+      overlay
+      br_netfilter
+
+- name: Apply kernel modules immediately
+  modprobe:
+    name: "{{ item }}"
+  loop:
+    - overlay
+    - br_netfilter
+
+- name: Set sysctl params
+  copy:
+    dest: /etc/sysctl.d/kubernetes.conf
+    content: |
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.ipv4.ip_forward                 = 1
+
+- name: Apply sysctl
+  command: sysctl --system

@@ -1,0 +1,107 @@
+- hosts: masters[0]
+  become: yes
+  tasks:
+    - name: Check if Kubernetes is already initialized
+      stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubeadm_initialized
+
+    - name: Print cluster existence check
+      debug:
+        msg: "Kubernetes already initialized: {{ kubeadm_initialized.stat.exists }}"
+        
+    - name: Initialize Kubernetes master (with load balancer)
+      command: >
+        kubeadm init
+        --control-plane-endpoint={{ cluster_endpoint }}
+        --apiserver-advertise-address={{ ansible_host }}
+        --pod-network-cidr={{ pod_cidr }}
+      when:
+        - use_loadbalancer | default(false)
+        - not kubeadm_initialized.stat.exists
+      register: init_output
+      ignore_errors: yes
+
+    - name: Initialize Kubernetes master (no load balancer)
+      command: >
+        kubeadm init
+        --apiserver-advertise-address={{ ansible_host }}
+        --pod-network-cidr={{ pod_cidr }}
+      when:
+        - not use_loadbalancer | default(false)
+        - not kubeadm_initialized.stat.exists
+      register: init_output_no_lb
+      ignore_errors: yes
+
+    - name: Print kubeadm init output 
+      debug:
+        msg: >
+          {%- if use_loadbalancer | default(false) -%}
+          {{ init_output }}
+          {%- else -%}
+          {{ init_output_no_lb }}
+          {%- endif -%}
+
+    - name: Create kube config dir
+      file:
+        path: /root/.kube
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+      register: kube_dir_output
+
+    - name: Print kube config dir creation process
+      debug:
+        msg: "Kube config directory creation output: {{ kube_dir_output }}"
+
+    - name: Copy admin.conf
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /root/.kube/config
+        remote_src: yes
+        owner: root
+        group: root
+        mode: 0644
+      register: copy_admin_conf_output
+
+    - name: Print admin.conf copy process
+      debug:
+        msg: "Copy admin.conf output: {{ copy_admin_conf_output }}"
+
+    - name: Apply Flannel network
+      become: yes
+      command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+      register: flannel_output
+      ignore_errors: yes
+
+    - name: Print Flannel network application process
+      debug:
+        msg: "Flannel network application output: {{ flannel_output.stdout }}"
+
+    - name: Save join command for worker nodes
+      command: kubeadm token create --print-join-command
+      register: join_command
+      delegate_to: localhost
+      run_once: true
+
+    - name: Debug join command on master node
+      debug:
+        msg: "Join command: {{ join_command }}"
+
+- hosts: workers
+  become: yes
+  tasks:
+    - name: Debug join command on worker node
+      debug:
+        msg: "Join command from master: {{ hostvars[groups['masters'][0]].join_command.stdout }}"
+
+    - name: Join Kubernetes worker node to the cluster
+      command: "{{ hostvars[groups['masters'][0]].join_command.stdout }}"
+      register: join_output
+      when: hostvars[groups['masters'][0]].join_command.stdout is defined
+      ignore_errors: yes
+
+    - name: Print worker node join output
+      debug:
+        msg: "Worker node join output: {{ join_output }}"
