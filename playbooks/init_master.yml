@@ -9,10 +9,6 @@
     - name: Print cluster existence check
       debug:
         msg: "Kubernetes already initialized: {{ kubeadm_initialized.stat.exists }}"
-    
-    - name: run kubelet before init
-      command: systemctl enable --now kubelet
-      when: kubeadm_initialized.stat.exists == false
 
     - name: Initialize Kubernetes master (with load balancer)
       command: >
@@ -102,29 +98,37 @@
       debug:
         msg: "Kubectx installation output: {{ kubectx_output.stdout }}"
 
-    - name: Save join command for worker nodes
-      command: kubeadm token create --print-join-command
-      register: join_command
-      delegate_to: localhost
-      run_once: true
-
-    - name: Debug join command on master node
-      debug:
-        msg: "Join command: {{ join_command }}"
-
-- hosts: workers
-  become: yes
-  tasks:
-    - name: Debug join command on worker node
-      debug:
-        msg: "Join command from master: {{ hostvars[groups['masters'][0]].join_command.stdout }}"
-
-    - name: Join Kubernetes worker node to the cluster
-      command: "{{ hostvars[groups['masters'][0]].join_command.stdout }}"
-      register: join_output
-      when: hostvars[groups['masters'][0]].join_command.stdout is defined
+    - name: check cluster status
+      command: kubectl get nodes
+      register: cluster_status_output
       ignore_errors: yes
 
-    - name: Print worker node join output
+    - name: Print cluster status
       debug:
-        msg: "Worker node join output: {{ join_output }}"
+        msg: "Cluster status output: {{ cluster_status_output.stdout }}"
+#     - name: Save join command for worker nodes
+#       command: kubeadm token create --print-join-command
+#       register: join_command
+#       delegate_to: localhost
+#       run_once: true
+
+#     - name: Debug join command on master node
+#       debug:
+#         msg: "Join command: {{ join_command }}"
+
+# - hosts: workers
+#   become: yes
+#   tasks:
+#     - name: Debug join command on worker node
+#       debug:
+#         msg: "Join command from master: {{ hostvars[groups['masters'][0]].join_command.stdout }}"
+
+#     - name: Join Kubernetes worker node to the cluster
+#       command: "{{ hostvars[groups['masters'][0]].join_command.stdout }}"
+#       register: join_output
+#       when: hostvars[groups['masters'][0]].join_command.stdout is defined
+#       ignore_errors: yes
+
+#     - name: Print worker node join output
+#       debug:
+#         msg: "Worker node join output: {{ join_output }}"
