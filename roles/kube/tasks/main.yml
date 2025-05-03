@@ -47,6 +47,11 @@
   register: cni_check
   failed_when: cni_check.rc != 0 and "No such file or directory" not in cni_check.stderr
 
+- name: Skip Go installation and CNI build if plugins are already present
+  debug:
+    msg: "CNI plugins are already present. Skipping Go installation and CNI build."
+  when: cni_check.rc == 0
+
 - name: Clone CNI plugins repository if not present
   git:
     repo: https://github.com/containernetworking/plugins.git
@@ -63,22 +68,24 @@
 - name: Debug required Go version
   debug:
     msg: "Required Go version: {{ required_go_version.stdout }}"
-  when: required_go_version.stdout is defined
+  when: required_go_version.stdout is defined and cni_check.rc != 0
 
 - name: Check installed Go version
   shell: go version | awk '{print $3}' | sed 's/go//'
   register: installed_go_version
   failed_when: false
+  when: cni_check.rc != 0
 
 - name: Debug installed Go version
   debug:
     msg: "Installed Go version: {{ installed_go_version.stdout }}"
-  when: installed_go_version.stdout is defined
+  when: installed_go_version.stdout is defined and cni_check.rc != 0
 
 - name: Remove existing Go installation if version mismatch
   shell: |
     apt-get remove --purge -y golang && apt-get autoremove -y
   when: >
+    cni_check.rc != 0 and
     required_go_version.stdout is defined and
     installed_go_version.stdout is defined and
     (installed_go_version.stdout != required_go_version.stdout)
@@ -91,13 +98,11 @@
       register: latest_go_version
       when: required_go_version is defined and required_go_version.stdout is defined
 
-    - name: Download and install the required Go version
-      block:
-        - name: Download Go tarball
-          get_url:
-            url: "https://go.dev/dl/{{ latest_go_version.stdout }}.linux-amd64.tar.gz"
-            dest: /tmp/{{ latest_go_version.stdout }}.tar.gz
-          when: latest_go_version is defined and latest_go_version.stdout is defined
+    - name: Download Go tarball
+      get_url:
+        url: "https://go.dev/dl/{{ latest_go_version.stdout }}.linux-amd64.tar.gz"
+        dest: /tmp/{{ latest_go_version.stdout }}.tar.gz
+      when: latest_go_version is defined and latest_go_version.stdout is defined
 
     - name: Extract Go tarball
       unarchive:
@@ -105,21 +110,23 @@
         dest: /usr/local
         remote_src: yes
 
-    - name: Add Go binary to PATH 
+    - name: Add Go binary to PATH
       shell: ln -s /usr/local/go/bin/go /usr/bin/go
       args:
         warn: false
-        
-  when: required_go_version.stdout is defined
+
+  when: cni_check.rc != 0 and required_go_version.stdout is defined
 
 - name: Validate Go installation
   shell: go version
   register: go_version_check
   failed_when: go_version_check.rc != 0
+  when: cni_check.rc != 0
 
 - name: Debug installed Go version after installation
   debug:
     msg: "Installed Go version after installation: {{ go_version_check.stdout }}"
+  when: cni_check.rc != 0
 
 - name: Build CNI plugins
   shell: |
@@ -142,11 +149,12 @@
   stat:
     path: /opt/cni/bin/loopback
   register: loopback_plugin
+  when: cni_check.rc != 0
 
 - name: Fail if CNI plugins are not installed
   fail:
     msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
-  when: not loopback_plugin.stat.exists
+  when: cni_check.rc != 0 and not loopback_plugin.stat.exists
 
 # Section 3: Install and Configure crictl
 - name: Check if crictl is installed
