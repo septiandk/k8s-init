@@ -72,6 +72,12 @@
       shell: echo "export KUBECONFIG=/root/.kube/config" >> /root/.bashrc
       register: export_kubeconfig_output
 
+    - name: Wait for kuberetes node to be ready
+      command: kubectl wait --for=condition=Ready node --all --timeout=60s
+      register: wait_output
+      ignore_errors: yes
+      until: wait_output.rc == 0
+
     - name: Apply Flannel network
       become: yes
       command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
