@@ -1,4 +1,4 @@
 pod_cidr: "10.244.0.0/16"
 use_loadbalancer: false
 cluster_endpoint: "172.29.249.184"
-kubernetes_version: "1.29.0-00"
+kubernetes_version: "v1.29"

@@ -1,7 +1,7 @@
 - name: Add Kubernetes GPG key
   shell: |
-    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | \
-    gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key | \
+      gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   args:
     warn: false
 
@@ -9,7 +9,7 @@
   copy:
     dest: /etc/apt/sources.list.d/kubernetes.list
     content: |
-      deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /
+      deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/ /
 
 - name: Install kubelet, kubeadm, kubectl
   apt:
