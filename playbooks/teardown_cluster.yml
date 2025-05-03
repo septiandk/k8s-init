@@ -1,35 +1,36 @@
 - name: Teardown Kubernetes cluster created with kubeadm
   hosts: all
-  become: yes
+  become: true
   tasks:
     - name: Drain node (only on master if possible)
       shell: |
         kubectl drain {{ inventory_hostname }} --force --ignore-daemonsets
       when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
-      ignore_errors: yes
+      ignore_errors: false
+      no_log: false
 
     - name: uncordon node (only on master if possible)
       shell: |
         kubectl uncordon {{ inventory_hostname }}
       when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
-      ignore_errors: yes
+      ignore_errors: false
 
     - name: Delete node from cluster (only on master)
       shell: |
         kubectl delete node {{ inventory_hostname }}
       when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
-      ignore_errors: yes
+      ignore_errors: false
 
     - name: Stop kubelet service
       systemd:
         name: kubelet
         state: stopped
         enabled: no
-      ignore_errors: yes
+      ignore_errors: false
 
     - name: Reset kubeadm
       shell: kubeadm reset -f
-      ignore_errors: yes
+      ignore_errors: false
 
     - name: Remove CNI configurations
       file:
@@ -42,12 +43,12 @@
         - /var/lib/kubelet
         - /etc/kubernetes
         - /var/lib/etcd
-      ignore_errors: yes
+      ignore_errors: false
 
     - name: Unhold Kubernetes packages
       shell: |
         apt-mark unhold kubelet kubeadm kubectl
-      ignore_errors: yes
+      ignore_errors: false
       
     - name: Remove Kubernetes packages
       apt:
@@ -56,7 +57,7 @@
           - kubeadm
           - kubectl
         state: absent
-        purge: yes
+        purge: true
 
     - name: Remove Kubernetes apt repository
       file:
@@ -77,15 +78,15 @@
         - /usr/bin/crictl
         - /usr/bin/etcd
         - /usr/bin/kube-proxy
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Clean up iptables
       shell: iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Remove .kube directory for user (optional)
       file:
         path: /home/{{ ansible_user }}/.kube
         state: absent
       become_user: "{{ ansible_user }}"
-      ignore_errors: yes
+      ignore_errors: true
