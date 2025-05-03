@@ -21,7 +21,7 @@
     dest: /etc/apt/sources.list.d/docker.list
     content: |
       deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
-  notify: Update apt cache
+    update_cache: yes
 
 - name: Install containerd, Docker CLI, and plugins
   apt:
