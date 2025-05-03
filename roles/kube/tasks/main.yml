@@ -52,16 +52,52 @@
   when: cni_check.rc != 0 or cni_check.stdout == ""
 
 - name: Install CNI plugins from source if not present
-  shell: |
-    git clone https://github.com/containernetworking/plugins /opt/plugins
-    cd /opt/plugins
-    git checkout $(git tag -l | sort -V | tail -n 1)
-    chmod +x ./build_linux.sh
-    ./build_linux.sh
-    sudo mkdir -p /opt/cni/bin
-    sudo cp /opt/plugins/bin/* /opt/cni/bin/
-  args:
-    warn: false
+  block:
+    - name: Clone CNI plugins repository
+      shell: |
+        git clone https://github.com/containernetworking/plugins /opt/plugins
+        cd /opt/plugins
+        git checkout $(git tag -l | sort -V | tail -n 1)
+      args:
+        warn: false
+
+    - name: Determine required Go version from go.mod
+      shell: |
+        grep -oP 'go[0-9]+\.[0-9]+' /opt/plugins/go.mod | head -n 1 | sed 's/go//'
+      register: required_go_version
+
+    - name: Install required Go version
+      apt:
+        name: "golang-{{ required_go_version.stdout }}"
+        state: present
+      when: required_go_version.stdout is defined
+
+    - name: Check installed Go version
+      shell: |
+        go version | awk '{print $3}' | sed 's/go//'
+      register: installed_go_version
+
+    - name: Validate Go version
+      fail:
+        msg: "Go version {{ required_go_version.stdout }} or higher is required. Current version is {{ installed_go_version.stdout }}."
+      when: >
+        required_go_version.stdout is defined and
+        installed_go_version.stdout is defined and
+        (installed_go_version.stdout is version(required_go_version.stdout, '<'))
+
+    - name: Build CNI plugins
+      shell: |
+        cd /opt/plugins
+        ./build_linux.sh
+      args:
+        warn: false
+
+    - name: Copy CNI plugins to /opt/cni/bin
+      shell: |
+        sudo mkdir -p /opt/cni/bin
+        sudo cp /opt/plugins/bin/* /opt/cni/bin/
+      args:
+        warn: false
   when: cni_check.rc != 0 or cni_check.stdout == ""
 
 - name: Check if crictl is installed
