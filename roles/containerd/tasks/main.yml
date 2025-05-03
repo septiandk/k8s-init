@@ -10,32 +10,34 @@
       - curl
     state: present
 
-- name: Add Docker GPG key
-  shell: |
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-    chmod a+r /etc/apt/keyrings/docker.asc
+- name: Download containerd tarball (v2.0.4)
+  get_url:
+    url: "https://github.com/containerd/containerd/releases/download/v2.0.4/containerd-2.0.4-linux-amd64.tar.gz"
+    dest: "/tmp/containerd-2.0.4-linux-amd64.tar.gz"
 
-- name: Add Docker repository
-  shell: |
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-    apt-get update
+- name: Extract containerd tarball to /usr/local
+  ansible.builtin.unarchive:
+    src: "/tmp/containerd-2.0.4-linux-amd64.tar.gz"
+    dest: "/usr/local"
+    remote_src: true
+    extra_opts: [ "--strip-components=1" ]
 
-- name: Install containerd, Docker CLI, and plugins
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
-    state: present
-    update_cache: yes
-  register: containerd_install_result
+- name: Ensure containerd is executable
+  file:
+    path: "/usr/local/bin/containerd"
+    mode: "u+x"
 
-- name: Debug containerd installation result
-  debug:
-    msg: "Installed packages result: {{ containerd_install_result }}"
+- name: Ensure containerd is running
+  systemd:
+    name: containerd
+    enabled: true
+    state: started
+    daemon_reload: yes
+
+- name: Clean up the tarball
+  file:
+    path: "/tmp/containerd-2.0.4-linux-amd64.tar.gz"
+    state: absent
 
 # Section 2: Ensure Configuration Directory Exists
 - name: Ensure /etc/containerd directory exists
