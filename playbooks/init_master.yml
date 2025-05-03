@@ -68,6 +68,10 @@
     - name: Print admin.conf copy process
       debug:
         msg: "Copy admin.conf output: {{ copy_admin_conf_output }}"
+    
+    - name: Export KUBECONFIG variable
+      shell: echo "export KUBECONFIG=/root/.kube/config" >> /root/.bashrc
+      register: export_kubeconfig_output
 
     - name: Apply Flannel network
       become: yes
@@ -106,6 +110,7 @@
     - name: Print cluster status
       debug:
         msg: "Cluster status output: {{ cluster_status_output.stdout }}"
+
 #     - name: Save join command for worker nodes
 #       command: kubeadm token create --print-join-command
 #       register: join_command
