@@ -1,20 +1,38 @@
-# Section 1: Install Containerd, runc, and Dependencies
+# Section 1: Install Containerd, Docker CLI, and Dependencies
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install required dependencies
+  apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+
 - name: Add Docker GPG key
   shell: |
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+  args:
+    warn: false
 
 - name: Add Docker repository
   copy:
     dest: /etc/apt/sources.list.d/docker.list
     content: |
-      deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
-    update_cache: yes
+      deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
+  notify: Update apt cache
 
-- name: Install containerd, runc, and dependencies
+- name: Install containerd, Docker CLI, and plugins
   apt:
     name:
+      - docker-ce
+      - docker-ce-cli
       - containerd.io
-      - runc
+      - docker-buildx-plugin
+      - docker-compose-plugin
     state: present
     update_cache: yes
   register: containerd_install_result
@@ -44,6 +62,8 @@
     mkdir -p /opt/cni/bin
     curl -Lo /tmp/cni-plugins.tgz https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz
     tar -C /opt/cni/bin -xzf /tmp/cni-plugins.tgz
+  args:
+    warn: false
 
 - name: Validate CNI plugins installation
   stat:
