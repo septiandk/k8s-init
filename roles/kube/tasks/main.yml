@@ -63,6 +63,8 @@
     curl -s https://go.dev/dl/ | grep -oP 'go{{ required_go_version.stdout }}[^\"]*' | head -n 1
   register: latest_go_version
   when: required_go_version is defined and required_go_version.stdout is defined
+  args:
+    warn: false
 
 - name: Download and install the required Go version
   block:
