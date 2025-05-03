@@ -74,9 +74,10 @@
 
     - name: Wait for kuberetes node to be ready
       command: kubectl wait --for=condition=Ready node --all --timeout=60s
-      tries: 5
       register: wait_output
       until: wait_output.rc == 0
+      retries: 5
+      delay: 10
 
     - name: Apply Flannel network
       become: yes
