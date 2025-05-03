@@ -4,38 +4,37 @@
   tasks:
     - name: Drain node (only on master if possible)
       shell: |
-        kubectl drain {{ inventory_hostname }} --force --ignore-daemonsets
+        kubectl drain {{ inventory_hostname }} --force --ignore-daemonsets --delete-local-data
       when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
-      ignore_errors: false
-      no_log: false
+      ignore_errors: true
 
-    - name: uncordon node (only on master if possible)
+    - name: Uncordon node (only on master if possible)
       shell: |
         kubectl uncordon {{ inventory_hostname }}
       when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
-      ignore_errors: false
+      ignore_errors: true
 
     - name: Delete node from cluster (only on master)
       shell: |
         kubectl delete node {{ inventory_hostname }}
       when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
-      ignore_errors: false
+      ignore_errors: true
 
     - name: Stop kubelet service
       systemd:
         name: kubelet
         state: stopped
         enabled: no
-      ignore_errors: false
+      ignore_errors: true
 
     - name: Reset kubeadm
       shell: kubeadm reset -f
-      ignore_errors: false
+      ignore_errors: true
 
     - name: Unhold Kubernetes packages
       shell: |
         apt-mark unhold kubelet kubeadm kubectl
-      ignore_errors: false
+      ignore_errors: true
 
     - name: Remove Kubernetes packages
       apt:
@@ -45,6 +44,25 @@
           - kubectl
         state: absent
         purge: true
+
+    - name: Stop containerd service
+      systemd:
+        name: containerd
+        state: stopped
+        enabled: no
+      ignore_errors: true
+
+    - name: Remove containerd package
+      apt:
+        name: containerd
+        state: absent
+        purge: true
+
+    - name: Remove containerd configuration
+      file:
+        path: /etc/containerd
+        state: absent
+      ignore_errors: true
 
     - name: Remove all related folders and files
       file:
@@ -61,6 +79,7 @@
         - /var/log/pods
         - /var/log/containers
         - /var/log/kube-audit
+        - /root/.kube
       ignore_errors: true
 
     - name: Remove Kubernetes apt repository
@@ -75,9 +94,13 @@
       shell: iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
       ignore_errors: true
 
-    - name: Remove .kube directory for user (optional)
+    - name: Remove Helm binary
       file:
-        path: /home/{{ ansible_user }}/.kube
+        path: /usr/local/bin/helm
         state: absent
-      become_user: "{{ ansible_user }}"
+      ignore_errors: true
+
+    - name: Remove kubectx
+      shell: snap remove kubectx
+      when: ansible_distribution == "Ubuntu"
       ignore_errors: true
