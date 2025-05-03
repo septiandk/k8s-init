@@ -50,7 +50,7 @@
       file:
         path: "{{ item }}"
         state: absent
-        loop:
+      loop:
         - /etc/kubernetes
         - /var/lib/kubelet
         - /var/lib/etcd
