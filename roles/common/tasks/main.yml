@@ -2,12 +2,22 @@
   shell: |
     swapoff -a
     sed -i '/swap/d' /etc/fstab
+  register: disable_swap_result
+
+- name: Debug disable swap result
+  debug:
+    var: disable_swap_result
 
 - name: Disable UFW
   systemd:
     name: ufw
     state: stopped
     enabled: no
+  register: disable_ufw_result
+
+- name: Debug disable UFW result
+  debug:
+    var: disable_ufw_result
 
 - name: Load kernel modules
   copy:
@@ -15,6 +25,11 @@
     content: |
       overlay
       br_netfilter
+  register: load_kernel_modules_result
+
+- name: Debug load kernel modules result
+  debug:
+    var: load_kernel_modules_result
 
 - name: Apply kernel modules immediately
   modprobe:
@@ -22,6 +37,11 @@
   loop:
     - overlay
     - br_netfilter
+  register: apply_kernel_modules_result
+
+- name: Debug apply kernel modules result
+  debug:
+    var: apply_kernel_modules_result
 
 - name: Set sysctl params
   copy:
@@ -30,6 +50,16 @@
       net.bridge.bridge-nf-call-ip6tables = 1
       net.bridge.bridge-nf-call-iptables  = 1
       net.ipv4.ip_forward                 = 1
+  register: set_sysctl_params_result
+
+- name: Debug set sysctl params result
+  debug:
+    var: set_sysctl_params_result
 
 - name: Apply sysctl
   command: sysctl --system
+  register: apply_sysctl_result
+
+- name: Debug apply sysctl result
+  debug:
+    var: apply_sysctl_result
