@@ -26,16 +26,23 @@
   debug:
     msg: "Installed packages result: {{ kubernetes_install_result }}"
 
-- name: reinstall missing packages with --reinstall
-  apt:
-    name:
-      - kubelet
-      - kubeadm
-      - kubectl
-      - kubernetes-cni    
-    state: present
-    update_cache: yes
-    force: yes
+- name: Check if CNI plugins are present
+  command: ls /opt/cni/bin
+  register: cni_check
+  failed_when: cni_check.rc != 0 and "No such file or directory" not in cni_check.stderr
+
+- name: Install CNI plugins from source if not present
+  shell: |
+    git clone https://github.com/containernetworking/plugins
+    cd plugins
+    git checkout $(git tag -l | sort -V | tail -n 1)
+    chmod +x ./build_linux.sh
+    ./build_linux.sh
+    sudo mkdir -p /opt/cni/bin
+    sudo cp bin/* /opt/cni/bin/
+  args:
+    warn: false
+  when: cni_check.rc != 0 or cni_check.stdout == ""
 
 - name: Hold Kubernetes packages
   dpkg_selections:
