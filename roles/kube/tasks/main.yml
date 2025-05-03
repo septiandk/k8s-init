@@ -102,7 +102,7 @@
 
     - name: Extract Go tarball
       unarchive:
-        src: /tmp/go{{ latest_go_version.stdout }}.tar.gz
+        src: /tmp/{{ latest_go_version.stdout }}.tar.gz
         dest: /usr/local
         remote_src: yes
 
