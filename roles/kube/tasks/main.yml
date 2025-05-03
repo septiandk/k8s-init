@@ -56,15 +56,21 @@
 - name: Debug required Go version
   debug:
     msg: "Required Go version: {{ required_go_version.stdout }}"
-  when: required_go_version.stdout is defined
+  when: required_go_version is defined and required_go_version.stdout is defined
+
+- name: Fetch the latest Go version
+  shell: |
+    curl -s https://go.dev/dl/ | grep -oP 'go{{ required_go_version.stdout }}[^\"]*' | head -n 1
+  register: latest_go_version
+  when: required_go_version is defined and required_go_version.stdout is defined
 
 - name: Download and install the required Go version
   block:
     - name: Download Go tarball
       get_url:
-        url: "https://go.dev/dl/go{{ required_go_version.stdout }}.linux-amd64.tar.gz"
-        dest: /tmp/go{{ required_go_version.stdout }}.tar.gz
-      when: required_go_version.stdout is defined
+        url: "https://go.dev/dl/{{ latest_go_version.stdout }}.linux-amd64.tar.gz"
+        dest: /tmp/{{ latest_go_version.stdout }}.tar.gz
+      when: latest_go_version is defined and latest_go_version.stdout is defined
 
     - name: Remove existing Go installation
       file:
@@ -73,9 +79,11 @@
 
     - name: Extract Go tarball
       unarchive:
-        src: /tmp/go{{ required_go_version.stdout }}.tar.gz
+        src: /tmp/{{ latest_go_version.stdout }}.tar.gz
         dest: /usr/local
         remote_src: yes
+      become: true
+      when: latest_go_version is defined and latest_go_version.stdout is defined
 
     - name: Add Go binary to PATH
       lineinfile:
