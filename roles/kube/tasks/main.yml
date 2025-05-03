@@ -111,10 +111,21 @@
         line: 'export PATH=$PATH:/usr/local/go/bin'
         state: present
 
-    - name: Source profile to update PATH
-      shell: source /etc/profile
+    - name: Add Go binary to system-wide PATH
+      copy:
+        dest: /etc/profile.d/go.sh
+        content: |
+          # Add Go binary to PATH
+          export PATH=$PATH:/usr/local/go/bin
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Source Go PATH configuration
+      shell: source /etc/profile.d/go.sh
       args:
         executable: /bin/bash
+
   when: required_go_version.stdout is defined
 
 - name: Validate Go installation
