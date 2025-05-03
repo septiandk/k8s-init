@@ -1,3 +1,4 @@
+# Section 1: Check and Install Kubernetes Components
 - name: Check if kubelet, kubeadm, and kubectl are installed
   shell: |
     which kubelet && which kubeadm && which kubectl
@@ -12,12 +13,12 @@
 - name: Add Kubernetes GPG key
   shell: |
     curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key | \
-      gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   args:
     warn: false
   when: kube_tools_check.rc != 0
 
-- name: Add Kubernetes repo
+- name: Add Kubernetes repository
   copy:
     dest: /etc/apt/sources.list.d/kubernetes.list
     content: |
@@ -35,11 +36,12 @@
   register: kubernetes_install_result
   when: kube_tools_check.rc != 0
 
-- name: Debug install result
+- name: Debug Kubernetes installation result
   debug:
     msg: "Installed packages result: {{ kubernetes_install_result }}"
   when: kube_tools_check.rc != 0
 
+# Section 2: Install and Configure CNI Plugins
 - name: Check if CNI plugins are present
   command: ls /opt/cni/bin
   register: cni_check
@@ -54,57 +56,40 @@
 - name: Install CNI plugins from source if not present
   block:
     - name: Clone CNI plugins repository
-      shell: |
-        git clone https://github.com/containernetworking/plugins /opt/plugins
-        cd /opt/plugins
-        git checkout $(git tag -l | sort -V | tail -n 1)
-      args:
-        warn: false
-
-    - name: Determine required Go version from go.mod
-      shell: |
-        grep -oP 'go[0-9]+\.[0-9]+' /opt/plugins/go.mod | head -n 1 | sed 's/go//'
-      register: required_go_version
-    
-    - name: Debug required Go version
-      debug:
-        msg: "Required Go version: {{ required_go_version.stdout }}"
-      when: required_go_version.stdout is defined
-
-    - name: Install required Go version
-      apt:
-        name: "golang-{{ required_go_version.stdout }}"
-        state: present
-      when: required_go_version.stdout is defined
-
-    - name: Check installed Go version
-      shell: |
-        go version | awk '{print $3}' | sed 's/go//'
-      register: installed_go_version
-
-    - name: Validate Go version
-      fail:
-        msg: "Go version {{ required_go_version.stdout }} or higher is required. Current version is {{ installed_go_version.stdout }}."
-      when: >
-        required_go_version.stdout is defined and
-        installed_go_version.stdout is defined and
-        (installed_go_version.stdout is version(required_go_version.stdout, '<'))
+      git:
+        repo: https://github.com/containernetworking/plugins.git
+        dest: /opt/plugins
+        version: main
+      when: cni_check.rc != 0
 
     - name: Build CNI plugins
       shell: |
         cd /opt/plugins
         ./build_linux.sh
       args:
+        chdir: /opt/plugins
         warn: false
+      when: cni_check.rc != 0
 
     - name: Copy CNI plugins to /opt/cni/bin
       shell: |
-        sudo mkdir -p /opt/cni/bin
-        sudo cp /opt/plugins/bin/* /opt/cni/bin/
+        mkdir -p /opt/cni/bin
+        cp /opt/plugins/bin/* /opt/cni/bin/
       args:
         warn: false
-  when: cni_check.rc != 0 or cni_check.stdout == ""
+      when: cni_check.rc != 0
 
+    - name: Validate CNI plugins installation
+      stat:
+        path: /opt/cni/bin/loopback
+      register: loopback_plugin
+
+    - name: Fail if CNI plugins are not installed
+      fail:
+        msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
+      when: not loopback_plugin.stat.exists
+
+# Section 3: Install and Configure crictl
 - name: Check if crictl is installed
   command: which crictl
   register: crictl_check
@@ -120,6 +105,7 @@
     warn: false
   when: crictl_check.rc != 0
 
+# Section 4: Finalize Kubernetes Setup
 - name: Hold Kubernetes packages
   dpkg_selections:
     name: "{{ item }}"
@@ -129,7 +115,7 @@
     - kubeadm
     - kubectl
 
-- name: Enable kubelet
+- name: Enable and start kubelet service
   systemd:
     name: kubelet
     enabled: yes
