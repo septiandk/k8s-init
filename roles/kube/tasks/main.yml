@@ -86,11 +86,19 @@
 
 - name: Download and install the required Go version
   block:
-    - name: Download Go tarball
-      get_url:
-        url: "https://go.dev/dl/go{{ required_go_version.stdout }}.linux-amd64.tar.gz"
-        dest: /tmp/go{{ required_go_version.stdout }}.tar.gz
-      when: required_go_version.stdout is defined
+    - name: Fetch the latest Go version
+      shell: |
+        curl -s https://go.dev/dl/ | grep -oP 'go{{ required_go_version.stdout }}[^\"]*' | head -n 1
+      register: latest_go_version
+      when: required_go_version is defined and required_go_version.stdout is defined
+
+    - name: Download and install the required Go version
+      block:
+        - name: Download Go tarball
+          get_url:
+            url: "https://go.dev/dl/{{ latest_go_version.stdout }}.linux-amd64.tar.gz"
+            dest: /tmp/{{ latest_go_version.stdout }}.tar.gz
+          when: latest_go_version is defined and latest_go_version.stdout is defined
 
     - name: Extract Go tarball
       unarchive:
