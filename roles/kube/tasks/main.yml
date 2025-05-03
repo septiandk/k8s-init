@@ -76,9 +76,10 @@
   when: installed_go_version.stdout is defined
 
 - name: Remove existing Go installation if version mismatch
-  file:
-    path: /usr/local/go
+  apt:
+    name: golang
     state: absent
+    purge: yes
   when: >
     required_go_version.stdout is defined and
     installed_go_version.stdout is defined and
