@@ -43,8 +43,8 @@
           - kubelet
           - kubeadm
           - kubectl
-      state: absent
-      purge: true
+        state: absent
+        purge: true
 
     - name: Remove all related folders and files
       file:
