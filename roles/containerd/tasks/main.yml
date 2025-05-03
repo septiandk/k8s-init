@@ -87,7 +87,7 @@
 - name: Download and install CNI plugins
   shell: |
     mkdir -p /opt/cni/bin
-    curl -Lo /tmp/cni-plugins.tgz https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz
+    curl -Lo /tmp/cni-plugins.tgz https://github.com/containernetworking/plugins/releases/download/v1.7.1/cni-plugins-linux-amd64-v1.7.1.tgz
     tar -C /opt/cni/bin -xzf /tmp/cni-plugins.tgz
 
 - name: Validate CNI plugins installation
@@ -99,23 +99,6 @@
   fail:
     msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
   when: not loopback_plugin.stat.exists
-
-# Section 6: Enable and Start Containerd Service
-- name: Enable and start containerd service
-  systemd:
-    name: containerd
-    enabled: yes
-    state: restarted
-
-# Section 7: Validate Containerd Installation
-- name: Check containerd version
-  shell: containerd --version
-  register: containerd_version_check
-  failed_when: containerd_version_check.rc != 0
-
-- name: Debug containerd version
-  debug:
-    msg: "Containerd version: {{ containerd_version_check.stdout }}"
 
 # Handlers
 - name: Restart containerd
