@@ -14,8 +14,6 @@
   shell: |
     curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key | \
     gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-  args:
-    warn: false
   when: kube_tools_check.rc != 0
 
 - name: Add Kubernetes repository
@@ -112,8 +110,6 @@
 
     - name: Add Go binary to PATH
       shell: ln -s /usr/local/go/bin/go /usr/bin/go
-      args:
-        warn: false
 
   when: cni_check.rc != 0 and required_go_version.stdout is defined
 
@@ -134,15 +130,12 @@
     ./build_linux.sh
   args:
     chdir: /opt/plugins
-    warn: false
   when: cni_check.rc != 0
 
 - name: Copy CNI plugins to /opt/cni/bin
   shell: |
     mkdir -p /opt/cni/bin
     cp /opt/plugins/bin/* /opt/cni/bin/
-  args:
-    warn: false
   when: cni_check.rc != 0
 
 - name: Validate CNI plugins installation
@@ -168,8 +161,6 @@
     curl -LO https://github.com/kubernetes-sigs/cri-tools/releases/download/$VERSION/crictl-$VERSION-linux-amd64.tar.gz
     sudo tar -C /usr/local/bin -xzf crictl-$VERSION-linux-amd64.tar.gz
     rm -f crictl-$VERSION-linux-amd64.tar.gz
-  args:
-    warn: false
   when: crictl_check.rc != 0
 
 # Section 4: Finalize Kubernetes Setup
