@@ -46,13 +46,30 @@
     group: root
     mode: '0755'
 
-# Section 3: Generate Containerd Configuration
+# Section 3: Generate and Modify Containerd Configuration
 - name: Generate containerd config if not present
   shell: containerd config default > /etc/containerd/config.toml
   args:
     creates: /etc/containerd/config.toml
 
-# Section 4: Install CNI Plugins
+- name: Comment out 'disabled_plugins = ["cri"]' in config.toml
+  lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^disabled_plugins = \["cri"\]'
+    state: absent
+  notify: Restart containerd
+
+# Section 4: Install runc
+- name: Download runc binary using curl
+  shell: |
+    curl -Lo /tmp/runc-{{ ansible_architecture }} \
+      https://github.com/opencontainers/runc/releases/download/v1.1.4/runc-{{ ansible_architecture }}
+
+- name: Install runc binary to /usr/local/sbin/runc
+  shell: |
+    install -m 755 /tmp/runc-{{ ansible_architecture }} /usr/local/sbin/runc
+
+# Section 5: Install CNI Plugins
 - name: Download and install CNI plugins
   shell: |
     mkdir -p /opt/cni/bin
@@ -69,14 +86,14 @@
     msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
   when: not loopback_plugin.stat.exists
 
-# Section 5: Enable and Start Containerd Service
+# Section 6: Enable and Start Containerd Service
 - name: Enable and start containerd service
   systemd:
     name: containerd
     enabled: yes
     state: restarted
 
-# Section 6: Validate Containerd Installation
+# Section 7: Validate Containerd Installation
 - name: Check containerd version
   shell: containerd --version
   register: containerd_version_check
@@ -85,3 +102,9 @@
 - name: Debug containerd version
   debug:
     msg: "Containerd version: {{ containerd_version_check.stdout }}"
+
+# Handlers
+- name: Restart containerd
+  systemd:
+    name: containerd
+    state: restarted
