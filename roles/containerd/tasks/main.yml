@@ -20,7 +20,7 @@
   copy:
     dest: /etc/apt/sources.list.d/docker.list
     content: |
-      deb [arch={{ ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
+      deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable
     update_cache: yes
 
 - name: Install containerd, Docker CLI, and plugins
