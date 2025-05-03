@@ -77,7 +77,7 @@
 - name: Download runc binary using curl
   shell: |
     curl -Lo /tmp/runc-{{ ansible_architecture }} \
-      https://github.com/opencontainers/runc/releases/download/v1.1.4/runc-{{ ansible_architecture }}
+      https://github.com/opencontainers/runc/releases/download/v1.3.0/runc-{{ ansible_architecture }}
 
 - name: Install runc binary to /usr/local/sbin/runc
   shell: |

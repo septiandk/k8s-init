@@ -1,5 +1,5 @@
 - hosts: masters[0]
-  become: yes
+  become: true
   tasks:
     - name: Check if Kubernetes is already initialized
       stat:
