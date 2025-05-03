@@ -76,7 +76,6 @@
       command: kubectl wait --for=condition=Ready node --all --timeout=60s
       tries: 5
       register: wait_output
-      ignore_errors: yes
       until: wait_output.rc == 0
 
     - name: Apply Flannel network
@@ -84,6 +83,7 @@
       command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
       register: flannel_output
       ignore_errors: yes
+      when: wait_output.rc == 0
 
     - name: Print Flannel network application process
       debug:
