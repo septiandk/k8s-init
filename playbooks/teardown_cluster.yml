@@ -54,6 +54,10 @@
           - kubectl
         state: absent
         purge: true
+        
+    - name: remove exited process crictl
+      shell: crictl ps -a --state Exited -q | xargs -r crictl rm
+      ignore_errors: true
 
     - name: Remove containerd package
       apt:
