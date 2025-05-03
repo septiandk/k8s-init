@@ -45,6 +45,12 @@
   register: cni_check
   failed_when: cni_check.rc != 0 and "No such file or directory" not in cni_check.stderr
 
+- name: Ensure Go is installed
+  apt:
+    name: golang
+    state: present
+  when: cni_check.rc != 0 or cni_check.stdout == ""
+
 - name: Install CNI plugins from source if not present
   shell: |
     git clone https://github.com/containernetworking/plugins
