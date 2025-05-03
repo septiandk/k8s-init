@@ -1,15 +1,28 @@
+- name: Check if kubelet, kubeadm, and kubectl are installed
+  shell: |
+    which kubelet && which kubeadm && which kubectl
+  register: kube_tools_check
+  failed_when: false
+
+- name: Skip installation if kubelet, kubeadm, and kubectl are already installed
+  debug:
+    msg: "kubelet, kubeadm, and kubectl are already installed. Skipping installation."
+  when: kube_tools_check.rc == 0
+
 - name: Add Kubernetes GPG key
   shell: |
     curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/Release.key | \
       gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   args:
     warn: false
+  when: kube_tools_check.rc != 0
 
 - name: Add Kubernetes repo
   copy:
     dest: /etc/apt/sources.list.d/kubernetes.list
     content: |
       deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ kubernetes_version }}/deb/ /
+  when: kube_tools_check.rc != 0
 
 - name: Install kubelet, kubeadm, kubectl
   apt:
@@ -21,10 +34,12 @@
     state: present
     update_cache: yes
   register: kubernetes_install_result
+  when: kube_tools_check.rc != 0
 
 - name: Debug install result
   debug:
     msg: "Installed packages result: {{ kubernetes_install_result }}"
+  when: kube_tools_check.rc != 0
 
 - name: Check if CNI plugins are present
   command: ls /opt/cni/bin
