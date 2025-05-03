@@ -80,7 +80,12 @@
         - /root/.kube
         - /etc/containerd
         - /opt/containerd
+        - /usr/lib/systemd/system/containerd.service
       ignore_errors: true
+      
+    - name: reload daemon
+      systemd:
+        daemon_reload: yes
 
     # Step 5: Remove Kubernetes Repositories and Keys
     - name: Remove Kubernetes apt repository and keys

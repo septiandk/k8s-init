@@ -1,8 +1,4 @@
 # Section 1: Install Containerd, Docker CLI, and Dependencies
-- name: Update apt cache
-  apt:
-    update_cache: yes
-
 - name: Install required dependencies
   apt:
     name:
@@ -50,13 +46,6 @@
   shell: containerd config default > /etc/containerd/config.toml
   args:
     creates: /etc/containerd/config.toml
-
-- name: Comment out 'disabled_plugins = ["cri"]' in config.toml
-  lineinfile:
-    path: /etc/containerd/config.toml
-    regexp: '^disabled_plugins = \["cri"\]'
-    state: absent
-  notify: Restart containerd
 
 # Section 4: Install runc
 - name: Download runc binary using curl
