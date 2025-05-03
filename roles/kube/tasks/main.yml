@@ -47,6 +47,13 @@
   register: cni_check
   failed_when: cni_check.rc != 0 and "No such file or directory" not in cni_check.stderr
 
+- name: Clone CNI plugins repository if not present
+  git:
+    repo: https://github.com/containernetworking/plugins.git
+    dest: /opt/plugins
+    version: main
+  when: cni_check.rc != 0
+
 - name: Parse required Go version from go.mod
   shell: |
     grep -oP 'go [0-9]+\.[0-9]+' /opt/plugins/go.mod | awk '{print $2}'
@@ -56,36 +63,40 @@
 - name: Debug required Go version
   debug:
     msg: "Required Go version: {{ required_go_version.stdout }}"
-  when: required_go_version is defined and required_go_version.stdout is defined
+  when: required_go_version.stdout is defined
 
-- name: Fetch the latest Go version
-  shell: |
-    curl -s https://go.dev/dl/ | grep -oP 'go{{ required_go_version.stdout }}[^\"]*' | head -n 1
-  register: latest_go_version
-  when: required_go_version is defined and required_go_version.stdout is defined
-  args:
-    warn: false
+- name: Check installed Go version
+  shell: go version | awk '{print $3}' | sed 's/go//'
+  register: installed_go_version
+  failed_when: false
+
+- name: Debug installed Go version
+  debug:
+    msg: "Installed Go version: {{ installed_go_version.stdout }}"
+  when: installed_go_version.stdout is defined
+
+- name: Remove existing Go installation if version mismatch
+  file:
+    path: /usr/local/go
+    state: absent
+  when: >
+    required_go_version.stdout is defined and
+    installed_go_version.stdout is defined and
+    (installed_go_version.stdout != required_go_version.stdout)
 
 - name: Download and install the required Go version
   block:
     - name: Download Go tarball
       get_url:
-        url: "https://go.dev/dl/{{ latest_go_version.stdout }}.linux-amd64.tar.gz"
-        dest: /tmp/{{ latest_go_version.stdout }}.tar.gz
-      when: latest_go_version is defined and latest_go_version.stdout is defined
-
-    - name: Remove existing Go installation
-      file:
-        path: /usr/local/go
-        state: absent
+        url: "https://go.dev/dl/go{{ required_go_version.stdout }}.linux-amd64.tar.gz"
+        dest: /tmp/go{{ required_go_version.stdout }}.tar.gz
+      when: required_go_version.stdout is defined
 
     - name: Extract Go tarball
       unarchive:
-        src: /tmp/{{ latest_go_version.stdout }}.tar.gz
+        src: /tmp/go{{ required_go_version.stdout }}.tar.gz
         dest: /usr/local
         remote_src: yes
-      become: true
-      when: latest_go_version is defined and latest_go_version.stdout is defined
 
     - name: Add Go binary to PATH
       lineinfile:
@@ -104,51 +115,36 @@
   register: go_version_check
   failed_when: go_version_check.rc != 0
 
-- name: Debug installed Go version
+- name: Debug installed Go version after installation
   debug:
-    msg: "Installed Go version: {{ go_version_check.stdout }}"
+    msg: "Installed Go version after installation: {{ go_version_check.stdout }}"
 
-- name: Ensure Go is installed
-  apt:
-    name: golang
-    state: present
-  when: cni_check.rc != 0 or cni_check.stdout == ""
+- name: Build CNI plugins
+  shell: |
+    cd /opt/plugins
+    ./build_linux.sh
+  args:
+    chdir: /opt/plugins
+    warn: false
+  when: cni_check.rc != 0
 
-- name: Install CNI plugins from source if not present
-  block:
-    - name: Clone CNI plugins repository
-      git:
-        repo: https://github.com/containernetworking/plugins.git
-        dest: /opt/plugins
-        version: main
-      when: cni_check.rc != 0
+- name: Copy CNI plugins to /opt/cni/bin
+  shell: |
+    mkdir -p /opt/cni/bin
+    cp /opt/plugins/bin/* /opt/cni/bin/
+  args:
+    warn: false
+  when: cni_check.rc != 0
 
-    - name: Build CNI plugins
-      shell: |
-        cd /opt/plugins
-        ./build_linux.sh
-      args:
-        chdir: /opt/plugins
-        warn: false
-      when: cni_check.rc != 0
+- name: Validate CNI plugins installation
+  stat:
+    path: /opt/cni/bin/loopback
+  register: loopback_plugin
 
-    - name: Copy CNI plugins to /opt/cni/bin
-      shell: |
-        mkdir -p /opt/cni/bin
-        cp /opt/plugins/bin/* /opt/cni/bin/
-      args:
-        warn: false
-      when: cni_check.rc != 0
-
-    - name: Validate CNI plugins installation
-      stat:
-        path: /opt/cni/bin/loopback
-      register: loopback_plugin
-
-    - name: Fail if CNI plugins are not installed
-      fail:
-        msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
-      when: not loopback_plugin.stat.exists
+- name: Fail if CNI plugins are not installed
+  fail:
+    msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
+  when: not loopback_plugin.stat.exists
 
 # Section 3: Install and Configure crictl
 - name: Check if crictl is installed
