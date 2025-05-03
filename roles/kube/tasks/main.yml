@@ -59,6 +59,21 @@
     warn: false
   when: cni_check.rc != 0 or cni_check.stdout == ""
 
+- name: Check if crictl is installed
+  command: which crictl
+  register: crictl_check
+  failed_when: false
+
+- name: Install crictl if not present
+  shell: |
+    VERSION=$(curl -s https://api.github.com/repos/kubernetes-sigs/cri-tools/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -LO https://github.com/kubernetes-sigs/cri-tools/releases/download/$VERSION/crictl-$VERSION-linux-amd64.tar.gz
+    sudo tar -C /usr/local/bin -xzf crictl-$VERSION-linux-amd64.tar.gz
+    rm -f crictl-$VERSION-linux-amd64.tar.gz
+  args:
+    warn: false
+  when: crictl_check.rc != 0
+
 - name: Hold Kubernetes packages
   dpkg_selections:
     name: "{{ item }}"
