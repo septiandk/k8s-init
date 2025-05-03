@@ -14,8 +14,8 @@ Instruksi ini akan membantumu bootstrap cluster Kubernetes dari **fresh Ubuntu 2
 
 ### 1. Clone Repo dan Masuk ke Direktori
 ```bash
-git clone https://your.repo.url/K8S-init.git
-cd K8S-init
+git clone https://github.com/septiandk/k8s-init.git
+cd k8s-init
 ```
 
 ### 2. Edit Inventory dan Konfigurasi Global
@@ -50,6 +50,9 @@ Pastikan SSH key-based login sudah diatur untuk semua node atau copy manual ssh-
 ```bash
 ssh-copy-id ubuntu@172.29.249.183
 ssh-copy-id ubuntu@172.29.249.184
+```
+```bash
+cat .ssh/id_rsa.pub   #copy output yang keluar dan paste di node tujuan
 ```
 
 ### 4. Install Ansible di Node Executor
