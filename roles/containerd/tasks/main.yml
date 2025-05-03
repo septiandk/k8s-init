@@ -1,11 +1,22 @@
-# Section 1: Install Containerd and Dependencies
-- name: Install containerd and dependencies
+# Section 1: Install Containerd, runc, and Dependencies
+- name: Add Docker GPG key
+  shell: |
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  args:
+    warn: false
+
+- name: Add Docker repository
+  copy:
+    dest: /etc/apt/sources.list.d/docker.list
+    content: |
+      deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
+  notify: Update apt cache
+
+- name: Install containerd, runc, and dependencies
   apt:
     name:
-      - containerd
-      - apt-transport-https
-      - gpg
-      - ca-certificates
+      - containerd.io
+      - runc
     state: present
     update_cache: yes
   register: containerd_install_result
@@ -22,41 +33,40 @@
     owner: root
     group: root
     mode: '0755'
-  register: containerd_dir_result
-
-- name: Debug directory creation result
-  debug:
-    msg: "Directory creation result: {{ containerd_dir_result }}"
 
 # Section 3: Generate Containerd Configuration
-- name: Check if containerd config exists
-  stat:
-    path: /etc/containerd/config.toml
-  register: containerd_config_check
-
 - name: Generate containerd config if not present
   shell: containerd config default > /etc/containerd/config.toml
-  when: not containerd_config_check.stat.exists
-  register: containerd_config_result
+  args:
+    creates: /etc/containerd/config.toml
 
-- name: Debug containerd config generation result
-  debug:
-    msg: "Config generation result: {{ containerd_config_result }}"
-  when: not containerd_config_check.stat.exists
+# Section 4: Install CNI Plugins
+- name: Download and install CNI plugins
+  shell: |
+    mkdir -p /opt/cni/bin
+    curl -Lo /tmp/cni-plugins.tgz https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz
+    tar -C /opt/cni/bin -xzf /tmp/cni-plugins.tgz
+  args:
+    warn: false
 
-# Section 4: Enable and Start Containerd Service
+- name: Validate CNI plugins installation
+  stat:
+    path: /opt/cni/bin/loopback
+  register: loopback_plugin
+
+- name: Fail if CNI plugins are not installed
+  fail:
+    msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
+  when: not loopback_plugin.stat.exists
+
+# Section 5: Enable and Start Containerd Service
 - name: Enable and start containerd service
   systemd:
     name: containerd
     enabled: yes
     state: restarted
-  register: containerd_service_result
 
-- name: Debug containerd service result
-  debug:
-    msg: "Containerd service result: {{ containerd_service_result }}"
-
-# Section 5: Validate Containerd Installation
+# Section 6: Validate Containerd Installation
 - name: Check containerd version
   shell: containerd --version
   register: containerd_version_check
