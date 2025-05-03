@@ -48,19 +48,19 @@
 
     - name: Remove all related folders and files
       file:
-      path: "{{ item }}"
-      state: absent
-      loop:
-      - /etc/kubernetes
-      - /var/lib/kubelet
-      - /var/lib/etcd
-      - /var/lib/cni
-      - /etc/cni
-      - /opt/cni
-      - /run/kubernetes
-      - /var/log/pods
-      - /var/log/containers
-      - /var/log/kube-audit
+        path: "{{ item }}"
+        state: absent
+        loop:
+        - /etc/kubernetes
+        - /var/lib/kubelet
+        - /var/lib/etcd
+        - /var/lib/cni
+        - /etc/cni
+        - /opt/cni
+        - /run/kubernetes
+        - /var/log/pods
+        - /var/log/containers
+        - /var/log/kube-audit
       ignore_errors: true
 
     - name: Remove Kubernetes apt repository
