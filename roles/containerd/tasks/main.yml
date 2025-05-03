@@ -2,8 +2,6 @@
 - name: Add Docker GPG key
   shell: |
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-  args:
-    warn: false
 
 - name: Add Docker repository
   copy:
@@ -46,8 +44,6 @@
     mkdir -p /opt/cni/bin
     curl -Lo /tmp/cni-plugins.tgz https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz
     tar -C /opt/cni/bin -xzf /tmp/cni-plugins.tgz
-  args:
-    warn: false
 
 - name: Validate CNI plugins installation
   stat:
