@@ -53,13 +53,13 @@
 
 - name: Install CNI plugins from source if not present
   shell: |
-    git clone https://github.com/containernetworking/plugins
-    cd plugins
+    git clone https://github.com/containernetworking/plugins /opt/plugins
+    cd /opt/plugins
     git checkout $(git tag -l | sort -V | tail -n 1)
     chmod +x ./build_linux.sh
     ./build_linux.sh
     sudo mkdir -p /opt/cni/bin
-    sudo cp bin/* /opt/cni/bin/
+    sudo cp /opt/plugins/bin/* /opt/cni/bin/
   args:
     warn: false
   when: cni_check.rc != 0 or cni_check.stdout == ""
