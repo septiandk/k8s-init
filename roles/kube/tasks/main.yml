@@ -76,10 +76,8 @@
   when: installed_go_version.stdout is defined
 
 - name: Remove existing Go installation if version mismatch
-  apt:
-    name: golang
-    state: absent
-    purge: yes
+  shell: |
+    apt-get remove --purge -y golang && apt-get autoremove -y
   when: >
     required_go_version.stdout is defined and
     installed_go_version.stdout is defined and
