@@ -25,7 +25,6 @@
     - name: Initialize Kubernetes master (no load balancer)
       command: >
         kubeadm init
-        --apiserver-advertise-address={{ ansible_host }}
         --pod-network-cidr={{ pod_cidr }}
       when:
         - not use_loadbalancer | default(false)
