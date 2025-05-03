@@ -92,6 +92,16 @@
       debug:
         msg: "Helm installation output: {{ helm_output.stdout }}"
 
+    - name: install kubectx
+      command: snap install kubectx --classic
+      when: ansible_distribution == "Ubuntu"
+      register: kubectx_output
+      ignore_errors: yes
+
+    - name: Print kubectx installation process
+      debug:
+        msg: "Kubectx installation output: {{ kubectx_output.stdout }}"
+
     - name: Save join command for worker nodes
       command: kubeadm token create --print-join-command
       register: join_command
