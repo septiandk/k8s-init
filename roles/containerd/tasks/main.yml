@@ -20,12 +20,38 @@
     path: "/usr/local/bin/containerd"
     mode: "u+x"
 
+- name: Create containerd systemd service file
+  copy:
+    dest: /etc/systemd/system/containerd.service
+    content: |
+      [Unit]
+      Description=containerd container runtime
+      Documentation=https://containerd.io
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/local/bin/containerd
+      Restart=always
+      RestartSec=5
+      Delegate=yes
+      KillMode=process
+      OOMScoreAdjust=-999
+      LimitNOFILE=1048576
+      LimitNPROC=infinity
+      LimitCORE=infinity
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
 - name: Ensure containerd is running
   systemd:
     name: containerd
     enabled: true
     state: started
-    daemon_reload: yes
 
 - name: Clean up the tarball
   file:
