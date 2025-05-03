@@ -47,6 +47,57 @@
   register: cni_check
   failed_when: cni_check.rc != 0 and "No such file or directory" not in cni_check.stderr
 
+- name: Parse required Go version from go.mod
+  shell: |
+    grep -oP 'go [0-9]+\.[0-9]+' /opt/plugins/go.mod | awk '{print $2}'
+  register: required_go_version
+  when: cni_check.rc != 0
+
+- name: Debug required Go version
+  debug:
+    msg: "Required Go version: {{ required_go_version.stdout }}"
+  when: required_go_version.stdout is defined
+
+- name: Download and install the required Go version
+  block:
+    - name: Download Go tarball
+      get_url:
+        url: "https://go.dev/dl/go{{ required_go_version.stdout }}.linux-amd64.tar.gz"
+        dest: /tmp/go{{ required_go_version.stdout }}.tar.gz
+      when: required_go_version.stdout is defined
+
+    - name: Remove existing Go installation
+      file:
+        path: /usr/local/go
+        state: absent
+
+    - name: Extract Go tarball
+      unarchive:
+        src: /tmp/go{{ required_go_version.stdout }}.tar.gz
+        dest: /usr/local
+        remote_src: yes
+
+    - name: Add Go binary to PATH
+      lineinfile:
+        path: /etc/profile
+        line: 'export PATH=$PATH:/usr/local/go/bin'
+        state: present
+
+    - name: Source profile to update PATH
+      shell: source /etc/profile
+      args:
+        executable: /bin/bash
+  when: required_go_version.stdout is defined
+
+- name: Validate Go installation
+  shell: go version
+  register: go_version_check
+  failed_when: go_version_check.rc != 0
+
+- name: Debug installed Go version
+  debug:
+    msg: "Installed Go version: {{ go_version_check.stdout }}"
+
 - name: Ensure Go is installed
   apt:
     name: golang
