@@ -32,32 +32,36 @@
       shell: kubeadm reset -f
       ignore_errors: false
 
-    - name: Remove CNI configurations
-      file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /etc/cni/net.d
-        - /opt/cni
-        - /var/lib/cni
-        - /var/lib/kubelet
-        - /etc/kubernetes
-        - /var/lib/etcd
-      ignore_errors: false
-
     - name: Unhold Kubernetes packages
       shell: |
         apt-mark unhold kubelet kubeadm kubectl
       ignore_errors: false
-      
+
     - name: Remove Kubernetes packages
       apt:
         name:
           - kubelet
           - kubeadm
           - kubectl
-        state: absent
-        purge: true
+      state: absent
+      purge: true
+
+    - name: Remove all related folders and files
+      file:
+      path: "{{ item }}"
+      state: absent
+      loop:
+      - /etc/kubernetes
+      - /var/lib/kubelet
+      - /var/lib/etcd
+      - /var/lib/cni
+      - /etc/cni
+      - /opt/cni
+      - /run/kubernetes
+      - /var/log/pods
+      - /var/log/containers
+      - /var/log/kube-audit
+      ignore_errors: true
 
     - name: Remove Kubernetes apt repository
       file:
@@ -66,19 +70,6 @@
       loop:
         - /etc/apt/sources.list.d/kubernetes.list
         - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-
-    - name: Remove Kubernetes binaries
-      file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /usr/bin/kubeadm
-        - /usr/bin/kubectl
-        - /usr/bin/kubelet
-        - /usr/bin/crictl
-        - /usr/bin/etcd
-        - /usr/bin/kube-proxy
-      ignore_errors: true
 
     - name: Clean up iptables
       shell: iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
