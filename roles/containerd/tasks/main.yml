@@ -16,11 +16,8 @@
     dest: "/tmp/containerd-2.0.4-linux-amd64.tar.gz"
 
 - name: Extract containerd tarball to /usr/local
-  ansible.builtin.unarchive:
-    src: "/tmp/containerd-2.0.4-linux-amd64.tar.gz"
-    dest: "/usr/local"
-    remote_src: true
-    extra_opts: [ "--strip-components=1" ]
+  shell: |
+    tar -C /usr/local -xzf /tmp/containerd-2.0.4-linux-amd64.tar.gz
 
 - name: Ensure containerd is executable
   file:
