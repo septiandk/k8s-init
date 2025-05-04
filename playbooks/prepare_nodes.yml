@@ -2,5 +2,6 @@
   become: yes
   roles:
     - common
-    - containerd
+    # - containerd
+    - cri-o
     - kube

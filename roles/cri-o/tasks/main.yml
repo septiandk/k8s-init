@@ -1,0 +1,46 @@
+- name: Add crio keyring
+  shell: |
+       curl -fsSL https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ CRIO_VERSION }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
+  register: add_crio_keyring
+
+- name: Debug add_crio_keyring
+  debug:
+    var: add_crio_keyring.stdout_lines
+
+- name: Add crio repository
+  shell: |
+       echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$(echo {{ CRIO_VERSION }} | cut -d '.' -f 1-2)/$(lsb_release -is|tr '[:upper:]' '[:lower:]') $(lsb_release -cs) main" > /etc/apt/sources.list.d/crio.list
+  register: add_crio_repo
+
+- name: Debug add_crio_repo
+  debug:
+    var: add_crio_repo.stdout_lines
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install CRI-O and dependencies
+  apt:
+    name:
+      - cri-o
+      - cri-o-runc
+      - cri-o-plugins
+      - cri-o-runc-selinux
+    state: present
+  register: install_crio
+
+- name: Debug install_crio
+  debug:
+    var: install_crio.stdout_lines
+
+- name: Start and Enable CRI-O service
+  systemd:
+    name: crio
+    state: started
+    enabled: yes
+  register: start_crio
+
+- name: Debug start_crio
+  debug:
+    var: start_crio.stdout_lines
