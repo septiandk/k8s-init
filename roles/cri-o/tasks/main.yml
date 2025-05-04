@@ -14,7 +14,7 @@
 - name: Add crio keyring
   shell: |
        curl -fsSL https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ crio_version }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
-  when: crio_installed_check.rc != 0
+  when: crio_installed_check.stderr.find('could not be found') != -1
   register: add_crio_keyring
 
 - name: Debug add_crio_keyring
