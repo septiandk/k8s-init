@@ -74,3 +74,27 @@
   fail:
     msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
   when: not loopback_plugin.stat.exists
+
+- name: Check if crio.network section exists
+  stat:
+    path: /etc/crio/crio.conf.d/10-crio.conf
+  register: crio_config_stat
+
+- name: Read crio.conf file content
+  slurp:
+    src: /etc/crio/crio.conf.d/10-crio.conf
+  when: crio_config_stat.stat.exists
+  register: crio_config_file
+
+- name: Add crio.network section if not present
+  lineinfile:
+    path: /etc/crio/crio.conf.d/10-crio.conf
+    line: |
+      [crio.network]
+      network_dir = "/etc/cni/net.d/"
+      plugin_dirs = [
+        "/opt/cni/bin/",
+      ]
+    insertafter: EOF
+    create: yes
+  when: "'[crio.network]' not in crio_config_file.content | b64decode"
