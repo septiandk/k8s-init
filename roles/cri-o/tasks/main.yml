@@ -98,3 +98,14 @@
     insertafter: EOF
     create: yes
   when: "'[crio.network]' not in crio_config_file.content | b64decode"
+
+- name: Restart CRI-O service
+  systemd:
+    name: crio
+    state: restarted
+  when: crio_config_stat.stat.exists
+  register: restart_crio
+
+- name: Debug restart_crio
+  debug:
+    var: restart_crio.stdout_lines
