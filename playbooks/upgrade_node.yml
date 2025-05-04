@@ -118,22 +118,14 @@
     - name: Get available kubectl versions
       shell: "apt-cache madison kubectl | awk 'NR==1 { print $3; exit }'"
       register: kubectl_version
-      changed_when: 
+      changed_when: false
       
     - name: Upgrade kubeadm on master nodes
       apt:
         name: "kubeadm={{ kubeadm_version.stdout }}"
         state: present
         update_cache: true
-    
-    - name: Check kubeadm upgrade plan
-      command: kubeadm upgrade plan
-      register: upgrade_plan_output
-
-    - name: Print upgrade plan output
-      debug:
-        msg: "{{ upgrade_plan_output.stdout }}"
-
+  
     - name: Upgrade kubelet and kubectl on master nodes
       apt:
         name:
