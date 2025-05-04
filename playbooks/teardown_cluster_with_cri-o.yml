@@ -1,0 +1,131 @@
+- name: Teardown Kubernetes cluster created with kubeadm
+  hosts: all
+  become: true
+  tasks:
+    # Step 1: Drain and Remove Nodes from the Cluster
+    - name: Drain node (only on master if possible)
+      shell: |
+        kubectl drain {{ inventory_hostname }} --force --ignore-daemonsets --delete-local-data
+      when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
+      ignore_errors: true
+
+    - name: Uncordon node (only on master if possible)
+      shell: |
+        kubectl uncordon {{ inventory_hostname }}
+      when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
+      ignore_errors: true
+
+    - name: Delete node from cluster (only on master)
+      shell: |
+        kubectl delete node {{ inventory_hostname }}
+      when: inventory_hostname in groups['all'] and inventory_hostname != groups['masters'][0]
+      ignore_errors: true
+
+    # Step 2: Stop Kubernetes and Containerd Services
+    - name: Stop kubelet service
+      systemd:
+        name: kubelet
+        state: stopped
+        enabled: no
+      ignore_errors: true
+
+    - name: Stop containerd service
+      systemd:
+        name: cri-o
+        state: stopped
+        enabled: no
+      ignore_errors: true
+
+    # Step 3: Reset Kubernetes and Remove Packages
+    - name: Reset kubeadm
+      shell: kubeadm reset -f
+      ignore_errors: true
+
+    - name: Unhold Kubernetes packages
+      shell: |
+        apt-mark unhold kubelet kubeadm kubectl
+      ignore_errors: true
+
+    - name: Remove Kubernetes packages
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: absent
+        purge: true
+
+    - name: Remove crio package
+      apt:
+        name: cri-o
+        state: absent
+        purge: true
+
+    - name: Remove all related Kubernetes and containerd folders and files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/kubernetes
+        - /var/lib/kubelet
+        - /var/lib/etcd
+        - /var/lib/cni
+        - /etc/cni
+        - /opt/cni
+        - /run/kubernetes
+        - /var/log/pods
+        - /var/log/crio
+        - /var/log/kube-audit
+        - /root/.kube
+        - /etc/crio
+      ignore_errors: true
+      
+    - name: reload daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Remove Kubernetes Cri-o apt repository and keys
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/kubernetes.list
+        - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        - /etc/apt/keyrings/crio-apt-keyring.gpg
+        - /etc/apt/sources.list.d/cri-o.list
+
+    - name: Clean up iptables rules
+      shell: |
+        iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+        iptables -t raw -F && iptables -t raw -X
+      ignore_errors: true
+
+    - name: Remove CNI network interfaces
+      shell: |
+        ip link set cni0 down && ip link set flannel.1 down
+        ip link delete cni0 || true
+        ip link delete flannel.1 || true
+      ignore_errors: true
+
+    # Step 7: Remove Additional Tools
+    - name: Remove Helm binary
+      file:
+        path: /usr/local/bin/helm
+        state: absent
+      ignore_errors: true
+
+    - name: Remove kubectx
+      shell: snap remove kubectx
+      when: ansible_distribution == "Ubuntu"
+      ignore_errors: true
+
+    # Step 8: Additional Cleanup Commands
+    - name: Kill processes using Kubernetes ports
+      shell: |
+        fuser -k 10250/tcp || true
+        fuser -k 10257/tcp || true
+        fuser -k 10259/tcp || true
+        fuser -k 2379/tcp || true
+        fuser -k 2380/tcp || true
+        fuser -k 6443/tcp || true
+      ignore_errors: true

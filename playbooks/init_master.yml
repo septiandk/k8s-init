@@ -20,7 +20,7 @@
         - use_loadbalancer | default(false)
         - not kubeadm_initialized.stat.exists
       register: init_output
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Initialize Kubernetes master (no load balancer)
       command: >
@@ -31,7 +31,7 @@
         - not use_loadbalancer | default(false)
         - not kubeadm_initialized.stat.exists
       register: init_output_no_lb
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Print kubeadm init output 
       debug:
@@ -59,7 +59,7 @@
       copy:
         src: /etc/kubernetes/admin.conf
         dest: /root/.kube/config
-        remote_src: yes
+        remote_src: true
         owner: root
         group: root
         mode: 0644
@@ -74,10 +74,10 @@
       register: export_kubeconfig_output
 
     - name: Apply Flannel network
-      become: yes
+      become: true
       command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
       register: flannel_output
-      ignore_errors: yes
+      ignore_errors: true
       
     - name: Print Flannel network application process
       debug:
@@ -86,7 +86,7 @@
     - name: install helm 
       command: curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
       register: helm_output
-      ignore_errors: yes
+      ignore_errors: true
     
     - name: Print helm installation process
       debug:
@@ -96,7 +96,7 @@
       command: snap install kubectx --classic
       when: ansible_distribution == "Ubuntu"
       register: kubectx_output
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Print kubectx installation process
       debug:
@@ -105,35 +105,8 @@
     - name: check cluster status
       command: kubectl get nodes
       register: cluster_status_output
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Print cluster status
       debug:
         msg: "Cluster status output: {{ cluster_status_output.stdout }}"
-
-#     - name: Save join command for worker nodes
-#       command: kubeadm token create --print-join-command
-#       register: join_command
-#       delegate_to: localhost
-#       run_once: true
-
-#     - name: Debug join command on master node
-#       debug:
-#         msg: "Join command: {{ join_command }}"
-
-# - hosts: workers
-#   become: yes
-#   tasks:
-#     - name: Debug join command on worker node
-#       debug:
-#         msg: "Join command from master: {{ hostvars[groups['masters'][0]].join_command.stdout }}"
-
-#     - name: Join Kubernetes worker node to the cluster
-#       command: "{{ hostvars[groups['masters'][0]].join_command.stdout }}"
-#       register: join_output
-#       when: hostvars[groups['masters'][0]].join_command.stdout is defined
-#       ignore_errors: yes
-
-#     - name: Print worker node join output
-#       debug:
-#         msg: "Worker node join output: {{ join_output }}"
