@@ -16,7 +16,8 @@
 
 - name: Add crio repository
   shell: |
-       echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/$(echo {{ CRIO_VERSION }} | cut -d '.' -f 1-2)/$(lsb_release -is|tr '[:upper:]' '[:lower:]') $(lsb_release -cs) main" > /etc/apt/sources.list.d/crio.list
+        echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ CRIO_VERSION }}/deb/ /" |
+        tee /etc/apt/sources.list.d/cri-o.list
   register: add_crio_repo
 
 - name: Debug add_crio_repo
