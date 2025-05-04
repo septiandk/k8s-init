@@ -51,7 +51,7 @@
         msg: "{{ upgrade_plan_output.stdout }}"
 
     - name: Apply kubeadm upgrade
-      command: kubeadm upgrade apply v{{ kubeadm_version.stdout | regex_replace('-00$', '') }} -y
+      command: kubeadm upgrade apply v{{ kubeadm_version.stdout | regex_replace('-.*$', '') }} -y
       register: upgrade_apply_output
 
     - name: Print kubeadm upgrade output
