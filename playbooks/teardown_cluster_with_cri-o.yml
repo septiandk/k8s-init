@@ -29,9 +29,9 @@
         enabled: no
       ignore_errors: true
 
-    - name: Stop containerd service
+    - name: Stop Crio service
       systemd:
-        name: cri-o
+        name: crio
         state: stopped
         enabled: no
       ignore_errors: true
