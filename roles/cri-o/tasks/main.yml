@@ -1,3 +1,10 @@
+- name: Install supporting packages
+  apt:
+    name:
+      - software-properties-common
+      - curl
+    state: present
+
 - name: Add crio keyring
   shell: |
        curl -fsSL https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ CRIO_VERSION }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
