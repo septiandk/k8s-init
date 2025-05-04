@@ -10,14 +10,12 @@
       shell: |
         curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ new_kubernetes_version }}/deb/Release.key | \
         gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-      when: kube_tools_check.rc != 0
 
     - name: Add Kubernetes repository
       copy:
         dest: /etc/apt/sources.list.d/kubernetes.list
         content: |
           deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ new_kubernetes_version }}/deb/ /
-      when: kube_tools_check.rc != 0
 
     - name: Update apt cache
       apt:
