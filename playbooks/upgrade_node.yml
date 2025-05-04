@@ -1,11 +1,16 @@
 - hosts: masters[0]
-  become: yes
+  become: true
   tasks:
+    - name: Unhold Kubernetes packages
+      shell: |
+        apt-mark unhold kubelet kubeadm kubectl
+      ignore_errors: true
+
     - name: Upgrade kubeadm on master nodes
       apt:
         name: "kubeadm={{ kubernetes_version }}"
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Check kubeadm upgrade plan
       command: kubeadm upgrade plan
@@ -29,7 +34,7 @@
           - "kubelet={{ kubernetes_version }}"
           - "kubectl={{ kubernetes_version }}"
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Restart kubelet service
       service:
@@ -37,7 +42,7 @@
         state: restarted
 
 - hosts: workers
-  become: yes
+  become: true
   tasks:
     - name: Drain worker node (run from master)
       delegate_to: "{{ groups['masters'][0] }}"
@@ -48,7 +53,7 @@
       apt:
         name: "kubeadm={{ kubernetes_version }}"
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Upgrade kubelet and kubectl on worker nodes
       apt:
@@ -56,7 +61,7 @@
           - "kubelet={{ kubernetes_version }}"
           - "kubectl={{ kubernetes_version }}"
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Restart kubelet service
       service:
