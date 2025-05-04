@@ -2,8 +2,7 @@
   become: true
   tasks:
     - name: Unhold Kubernetes packages
-      shell: |
-        apt-mark unhold kubelet kubeadm kubectl
+      shell: apt-mark unhold kubelet kubeadm kubectl
       ignore_errors: true
 
     - name: Add Kubernetes GPG key
@@ -36,17 +35,16 @@
       register: kubectl_version
       changed_when: false
 
-    - name: Upgrade kubeadm on master nodes
+    - name: Upgrade kubeadm on master node
       apt:
         name: "kubeadm={{ kubeadm_version.stdout }}"
         state: present
-        update_cache: true
 
     - name: Check kubeadm upgrade plan
       command: kubeadm upgrade plan
       register: upgrade_plan_output
 
-    - name: Print upgrade plan output
+    - name: Print upgrade plan
       debug:
         msg: "{{ upgrade_plan_output.stdout }}"
 
@@ -58,36 +56,33 @@
       debug:
         msg: "{{ upgrade_apply_output.stdout }}"
 
-    - name: Upgrade kubelet and kubectl on master nodes
+    - name: Upgrade kubelet and kubectl on master node
       apt:
         name:
           - "kubelet={{ kubelet_version.stdout }}"
           - "kubectl={{ kubectl_version.stdout }}"
         state: present
-        update_cache: true
 
-    - name: Restart kubelet service
+    - name: Restart kubelet on master
       service:
         name: kubelet
         state: restarted
 
     - name: Hold Kubernetes packages
-      shell: |
-        apt-mark hold kubelet kubeadm kubectl
+      shell: apt-mark hold kubelet kubeadm kubectl
 
+---
 
 - hosts: workers
-  serial: 1  
+  serial: 1
   become: true
   tasks:
     - name: Drain worker node (run from master)
       delegate_to: "{{ groups['masters'][0] }}"
       command: kubectl drain {{ inventory_hostname }} --ignore-daemonsets --delete-emptydir-data
-      when: inventory_hostname != groups['masters'][0]
 
     - name: Unhold Kubernetes packages
-      shell: |
-        apt-mark unhold kubelet kubeadm kubectl
+      shell: apt-mark unhold kubelet kubeadm kubectl
       ignore_errors: true
 
     - name: Add Kubernetes GPG key
@@ -119,22 +114,23 @@
       shell: "apt-cache madison kubectl | awk 'NR==1 { print $3; exit }'"
       register: kubectl_version
       changed_when: false
-      
-    - name: Upgrade kubeadm on master nodes
+
+    - name: Upgrade kubeadm on worker node
       apt:
         name: "kubeadm={{ kubeadm_version.stdout }}"
         state: present
-        update_cache: true
-  
-    - name: Upgrade kubelet and kubectl on master nodes
+
+    - name: Run kubeadm upgrade node
+      command: kubeadm upgrade node
+
+    - name: Upgrade kubelet and kubectl on worker node
       apt:
         name:
           - "kubelet={{ kubelet_version.stdout }}"
           - "kubectl={{ kubectl_version.stdout }}"
         state: present
-        update_cache: true
 
-    - name: Restart kubelet service
+    - name: Restart kubelet on worker
       service:
         name: kubelet
         state: restarted
@@ -142,8 +138,6 @@
     - name: Uncordon worker node (run from master)
       delegate_to: "{{ groups['masters'][0] }}"
       command: kubectl uncordon {{ inventory_hostname }}
-      when: inventory_hostname != groups['masters'][0]
 
     - name: Hold Kubernetes packages
-      shell: |
-        apt-mark hold kubelet kubeadm kubectl
+      shell: apt-mark hold kubelet kubeadm kubectl
