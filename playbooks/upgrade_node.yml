@@ -82,7 +82,7 @@
   tasks:
     - name: Drain worker node (run from master)
       delegate_to: "{{ groups['masters'][0] }}"
-      command: kubectl drain {{ inventory_hostname }} --ignore-daemonsets 
+      command: kubectl drain {{ inventory_hostname }} --ignore-daemonsets --delete-emptydir-data
       when: inventory_hostname != groups['masters'][0]
 
     - name: Unhold Kubernetes packages
