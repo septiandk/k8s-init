@@ -5,7 +5,7 @@
   register: kube_tools_check
   failed_when: false
 
-- name: Skip installation if kubelet, kubeadm, and kubectl are already installed
+- name: Debug installation if kubelet, kubeadm, and kubectl 
   debug:
     msg: "kubelet, kubeadm, and kubectl are already installed. Skipping installation."
   when: kube_tools_check.rc == 0
@@ -36,7 +36,7 @@
 
 - name: Debug Kubernetes installation result
   debug:
-    msg: "Installed packages result: {{ kubernetes_install_result }}"
+    var: kubernetes_install_result
   when: kube_tools_check.rc != 0
 
 # Section 3: Install and Configure crictl

@@ -33,14 +33,13 @@
       register: init_output_no_lb
       ignore_errors: true
 
-    - name: Print kubeadm init output 
+    - name: Set correct kubeadm init output based on load balancer usage
+      set_fact:
+        selected_init_output: "{{ init_output if use_loadbalancer | default(false) else init_output_no_lb }}"
+
+    - name: Print kubeadm init output
       debug:
-        msg: >
-          {%- if use_loadbalancer | default(false) -%}
-          {{ init_output }}
-          {%- else -%}
-          {{ init_output_no_lb }}
-          {%- endif -%}
+        var: selected_init_output
 
     - name: Create kube config dir
       file:
@@ -81,7 +80,7 @@
       
     - name: Print Flannel network application process
       debug:
-        msg: "Flannel network application output: {{ flannel_output.stdout }}"
+        var: flannel_output.stdout
     
     - name: install helm 
       command: curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
@@ -90,7 +89,7 @@
     
     - name: Print helm installation process
       debug:
-        msg: "Helm installation output: {{ helm_output.stdout }}"
+        var: helm_output.stdout
 
     - name: install kubectx
       command: snap install kubectx --classic
@@ -100,7 +99,7 @@
 
     - name: Print kubectx installation process
       debug:
-        msg: "Kubectx installation output: {{ kubectx_output.stdout }}"
+        var: kubectx_output.stdout
 
     - name: check cluster status
       command: kubectl get nodes
@@ -109,4 +108,4 @@
 
     - name: Print cluster status
       debug:
-        msg: "Cluster status output: {{ cluster_status_output.stdout }}"
+        var: cluster_status_output.stdout
