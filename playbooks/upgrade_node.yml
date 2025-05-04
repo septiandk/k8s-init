@@ -6,9 +6,41 @@
         apt-mark unhold kubelet kubeadm kubectl
       ignore_errors: true
 
+    - name: Add Kubernetes GPG key
+      shell: |
+        curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ new_kubernetes_version }}/deb/Release.key | \
+        gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      when: kube_tools_check.rc != 0
+
+    - name: Add Kubernetes repository
+      copy:
+        dest: /etc/apt/sources.list.d/kubernetes.list
+        content: |
+          deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ new_kubernetes_version }}/deb/ /
+      when: kube_tools_check.rc != 0
+
+    - name: Update apt cache
+      apt:
+        update_cache: true
+
+    - name: Get available kubeadm versions
+      shell: "apt-cache madison kubeadm | awk 'NR==1 { print $3; exit }'"
+      register: kubeadm_version
+      changed_when: false
+
+    - name: Get available kubelet versions
+      shell: "apt-cache madison kubelet | awk 'NR==1 { print $3; exit }'"
+      register: kubelet_version
+      changed_when: false
+
+    - name: Get available kubectl versions
+      shell: "apt-cache madison kubectl | awk 'NR==1 { print $3; exit }'"
+      register: kubectl_version
+      changed_when: false
+
     - name: Upgrade kubeadm on master nodes
       apt:
-        name: "kubeadm={{ upgrade_kubernetes_version }}"
+        name: "kubeadm={{ kubeadm_version.stdout }}"
         state: present
         update_cache: true
 
@@ -21,7 +53,7 @@
         msg: "{{ upgrade_plan_output.stdout }}"
 
     - name: Apply kubeadm upgrade
-      command: kubeadm upgrade apply v{{ upgrade_kubernetes_version | regex_replace('-00$', '') }} -y
+      command: kubeadm upgrade apply v{{ kubeadm_version.stdout | regex_replace('-00$', '') }} -y
       register: upgrade_apply_output
 
     - name: Print kubeadm upgrade output
@@ -31,8 +63,8 @@
     - name: Upgrade kubelet and kubectl on master nodes
       apt:
         name:
-          - "kubelet={{ upgrade_kubernetes_version }}"
-          - "kubectl={{ upgrade_kubernetes_version }}"
+          - "kubelet={{ kubelet_version.stdout }}"
+          - "kubectl={{ kubectl_version.stdout }}"
         state: present
         update_cache: true
 
