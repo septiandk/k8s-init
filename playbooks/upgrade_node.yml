@@ -8,7 +8,7 @@
 
     - name: Upgrade kubeadm on master nodes
       apt:
-        name: "kubeadm={{ kubernetes_version }}"
+        name: "kubeadm={{ upgrade_kubernetes_version }}"
         state: present
         update_cache: true
 
@@ -21,7 +21,7 @@
         msg: "{{ upgrade_plan_output.stdout }}"
 
     - name: Apply kubeadm upgrade
-      command: kubeadm upgrade apply v{{ kubernetes_version | regex_replace('-00$', '') }} -y
+      command: kubeadm upgrade apply v{{ upgrade_kubernetes_version | regex_replace('-00$', '') }} -y
       register: upgrade_apply_output
 
     - name: Print kubeadm upgrade output
@@ -31,8 +31,8 @@
     - name: Upgrade kubelet and kubectl on master nodes
       apt:
         name:
-          - "kubelet={{ kubernetes_version }}"
-          - "kubectl={{ kubernetes_version }}"
+          - "kubelet={{ upgrade_kubernetes_version }}"
+          - "kubectl={{ upgrade_kubernetes_version }}"
         state: present
         update_cache: true
 
@@ -51,15 +51,15 @@
 
     - name: Upgrade kubeadm on worker nodes
       apt:
-        name: "kubeadm={{ kubernetes_version }}"
+        name: "kubeadm={{ upgrade_kubernetes_version }}"
         state: present
         update_cache: true
 
     - name: Upgrade kubelet and kubectl on worker nodes
       apt:
         name:
-          - "kubelet={{ kubernetes_version }}"
-          - "kubectl={{ kubernetes_version }}"
+          - "kubelet={{ upgrade_kubernetes_version }}"
+          - "kubectl={{ upgrade_kubernetes_version }}"
         state: present
         update_cache: true
 
