@@ -5,75 +5,93 @@
       - curl
     state: present
 
+- name: Check if CRI-O is already installed
+  shell: dpkg -s cri-o | grep -q "Status: install ok installed"
+  register: crio_installed_check
+  ignore_errors: true
+
 - name: Add crio keyring
   shell: |
        curl -fsSL https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ crio_version }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
+  when: crio_installed_check.rc != 0
   register: add_crio_keyring
 
 - name: Debug add_crio_keyring
   debug:
     var: add_crio_keyring.stdout_lines
+  when: crio_installed_check.rc != 0
 
 - name: Add crio repository
   shell: |
         echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ crio_version }}/deb/ /" |
         tee /etc/apt/sources.list.d/cri-o.list
+  when: crio_installed_check.rc != 0
   register: add_crio_repo
 
 - name: Debug add_crio_repo
   debug:
     var: add_crio_repo.stdout_lines
+  when: crio_installed_check.rc != 0
 
 - name: Update apt cache
   apt:
     update_cache: yes
+  when: crio_installed_check.rc != 0
 
 - name: Install CRI-O and dependencies
   apt:
     name:
       - cri-o
     state: present
+  when: crio_installed_check.rc != 0
   register: install_crio
 
 - name: Debug install_crio
   debug:
     var: install_crio.stdout_lines
+  when: crio_installed_check.rc != 0
 
 - name: Start and Enable CRI-O service
   systemd:
     name: crio
     state: started
     enabled: yes
+  when: crio_installed_check.rc != 0
   register: start_crio
 
 - name: Debug start_crio
   debug:
     var: start_crio
+  when: crio_installed_check.rc != 0
 
 - name: Download runc binary using curl
   shell: |
     curl -Lo /tmp/runc-{{ ansible_architecture }} \
       https://github.com/opencontainers/runc/releases/download/v1.3.0/runc-{{ ansible_architecture }}
+  when: crio_installed_check.rc != 0
 
 - name: Install runc binary to /usr/local/sbin/runc
   shell: |
     install -m 755 /tmp/runc-{{ ansible_architecture }} /usr/local/sbin/runc
+  when: crio_installed_check.rc != 0
 
 - name: Download and install CNI plugins
   shell: |
     mkdir -p /opt/cni/bin
     curl -Lo /tmp/cni-plugins.tgz https://github.com/containernetworking/plugins/releases/download/v1.7.1/cni-plugins-linux-amd64-v1.7.1.tgz
     tar -C /opt/cni/bin -xzf /tmp/cni-plugins.tgz
+  when: crio_installed_check.rc != 0
 
 - name: Validate CNI plugins installation
   stat:
     path: /opt/cni/bin/loopback
   register: loopback_plugin
+  when: crio_installed_check.rc != 0
 
 - name: Fail if CNI plugins are not installed
   fail:
     msg: "CNI plugins installation failed. The 'loopback' plugin is missing in /opt/cni/bin."
-  when: not loopback_plugin.stat.exists
+  when: crio_installed_check.rc != 0 and not loopback_plugin.stat.exists
 
 - name: Check if crio.network section exists
   stat:
@@ -108,4 +126,4 @@
 
 - name: Debug restart_crio
   debug:
-    var: restart_crio.stdout_lines
+    var: restart_crio
