@@ -48,7 +48,7 @@
 
 - name: Debug start_crio
   debug:
-    var: start_crio.stdout_lines
+    var: start_crio
 
 - name: Download runc binary using curl
   shell: |
