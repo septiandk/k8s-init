@@ -32,9 +32,6 @@
   apt:
     name:
       - cri-o
-      - cri-o-runc
-      - cri-o-plugins
-      - cri-o-runc-selinux
     state: present
   register: install_crio
 
