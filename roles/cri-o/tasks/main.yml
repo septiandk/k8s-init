@@ -7,7 +7,7 @@
 
 - name: Check if CRI-O is already installed
   shell: |
-        dpkg -s cri-o | grep -q "Status: install ok installed"
+        systemctl status crio
   register: crio_installed_check
   ignore_errors: true
 
