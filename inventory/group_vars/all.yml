@@ -3,4 +3,4 @@ use_loadbalancer: false
 cluster_endpoint: "172.29.249.184"
 kubernetes_version: "v1.29"
 new_kubernetes_version: "v1.30"
-CRIO_VERSION: "v1.29"
+crio_version: "v1.29"
