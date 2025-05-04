@@ -71,25 +71,73 @@
         name: kubelet
         state: restarted
 
+    - name: Hold Kubernetes packages
+      shell: |
+        apt-mark hold kubelet kubeadm kubectl
+
+
 - hosts: workers
   become: true
   tasks:
     - name: Drain worker node (run from master)
       delegate_to: "{{ groups['masters'][0] }}"
-      command: kubectl drain {{ inventory_hostname }} --ignore-daemonsets --delete-local-data
+      command: kubectl drain {{ inventory_hostname }} --ignore-daemonsets 
       when: inventory_hostname != groups['masters'][0]
 
-    - name: Upgrade kubeadm on worker nodes
+    - name: Unhold Kubernetes packages
+      shell: |
+        apt-mark unhold kubelet kubeadm kubectl
+      ignore_errors: true
+
+    - name: Add Kubernetes GPG key
+      shell: |
+        curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ new_kubernetes_version }}/deb/Release.key | \
+        gpg --dearmor | tee /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes repository
+      copy:
+        dest: /etc/apt/sources.list.d/kubernetes.list
+        content: |
+          deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ new_kubernetes_version }}/deb/ /
+
+    - name: Update apt cache
       apt:
-        name: "kubeadm={{ upgrade_kubernetes_version }}"
-        state: present
         update_cache: true
 
-    - name: Upgrade kubelet and kubectl on worker nodes
+    - name: Get available kubeadm versions
+      shell: "apt-cache madison kubeadm | awk 'NR==1 { print $3; exit }'"
+      register: kubeadm_version
+      changed_when: false
+
+    - name: Get available kubelet versions
+      shell: "apt-cache madison kubelet | awk 'NR==1 { print $3; exit }'"
+      register: kubelet_version
+      changed_when: false
+
+    - name: Get available kubectl versions
+      shell: "apt-cache madison kubectl | awk 'NR==1 { print $3; exit }'"
+      register: kubectl_version
+      changed_when: 
+      
+    - name: Upgrade kubeadm on master nodes
+      apt:
+        name: "kubeadm={{ kubeadm_version.stdout }}"
+        state: present
+        update_cache: true
+    
+    - name: Check kubeadm upgrade plan
+      command: kubeadm upgrade plan
+      register: upgrade_plan_output
+
+    - name: Print upgrade plan output
+      debug:
+        msg: "{{ upgrade_plan_output.stdout }}"
+
+    - name: Upgrade kubelet and kubectl on master nodes
       apt:
         name:
-          - "kubelet={{ upgrade_kubernetes_version }}"
-          - "kubectl={{ upgrade_kubernetes_version }}"
+          - "kubelet={{ kubelet_version.stdout }}"
+          - "kubectl={{ kubectl_version.stdout }}"
         state: present
         update_cache: true
 
@@ -102,3 +150,7 @@
       delegate_to: "{{ groups['masters'][0] }}"
       command: kubectl uncordon {{ inventory_hostname }}
       when: inventory_hostname != groups['masters'][0]
+
+    - name: Hold Kubernetes packages
+      shell: |
+        apt-mark hold kubelet kubeadm kubectl

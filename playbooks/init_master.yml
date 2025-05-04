@@ -83,7 +83,8 @@
         var: flannel_output.stdout
     
     - name: install helm 
-      command: curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+      shell: |
+            curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
       register: helm_output
       ignore_errors: true
     
