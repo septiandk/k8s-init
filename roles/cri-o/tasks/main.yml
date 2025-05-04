@@ -14,56 +14,56 @@
 - name: Add crio keyring
   shell: |
        curl -fsSL https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ crio_version }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
-  when: crio_installed_check.stderr.find('could not be found') != -1
+  args:
+    creates: /etc/apt/keyrings/cri-o-apt-keyring.gpg
   register: add_crio_keyring
 
 - name: Debug add_crio_keyring
   debug:
     var: add_crio_keyring.stdout_lines
-  when: crio_installed_check.rc != 0
 
 - name: Add crio repository
   shell: |
         echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/{{ crio_version }}/deb/ /" |
         tee /etc/apt/sources.list.d/cri-o.list
-  when: crio_installed_check.rc != 0
+  args:
+    creates: /etc/apt/sources.list.d/cri-o.list
   register: add_crio_repo
 
 - name: Debug add_crio_repo
   debug:
     var: add_crio_repo.stdout_lines
-  when: crio_installed_check.rc != 0
 
 - name: Update apt cache
   apt:
     update_cache: yes
-  when: crio_installed_check.rc != 0
+  when: "'could not be found' in crio_installed_check.stderr"
 
 - name: Install CRI-O and dependencies
   apt:
     name:
       - cri-o
     state: present
-  when: crio_installed_check.rc != 0
+  when: "'could not be found' in crio_installed_check.stderr"
   register: install_crio
 
 - name: Debug install_crio
   debug:
     var: install_crio.stdout_lines
-  when: crio_installed_check.rc != 0
+  when: "'could not be found' in crio_installed_check.stderr"
 
 - name: Start and Enable CRI-O service
   systemd:
     name: crio
     state: started
     enabled: yes
-  when: crio_installed_check.rc != 0
+  when: "'could not be found' in crio_installed_check.stderr"
   register: start_crio
 
 - name: Debug start_crio
   debug:
     var: start_crio
-  when: crio_installed_check.rc != 0
+  when: "'could not be found' in crio_installed_check.stderr"
 
 - name: Download runc binary using curl
   shell: |

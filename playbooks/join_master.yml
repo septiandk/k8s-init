@@ -28,7 +28,7 @@
 
     - name: Debug full join command
       debug:
-        msg: "{{ full_join_command }}"
+        var: full_join_command
 
 - hosts: "masters[1:]"
   become: yes
@@ -40,5 +40,5 @@
 
     - name: Debug master node join output
       debug:
-        msg: "Master join output: {{ join_output }}"
+        var: join_output.stdout_lines 
 

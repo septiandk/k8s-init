@@ -18,4 +18,4 @@
 
     - name: Debug worker node join output
       debug:
-        msg: "Worker join output: {{ join_output }}"
+        var: join_output.stdout_lines 
